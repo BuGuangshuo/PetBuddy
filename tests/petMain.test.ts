@@ -32,7 +32,7 @@ describe('pet-main interactions', () => {
 
     expect(source).toContain('{messageBubble}')
     expect(source.indexOf('{messageBubble}')).toBeLessThan(source.indexOf('{breakReminder ? ('))
-    expect(source.indexOf('{messageBubble}')).toBeLessThan(source.indexOf("<div className='pet-card' onMouseDown={handleMouseDown}>"))
+    expect(source.indexOf('{messageBubble}')).toBeLessThan(source.indexOf("className='pet-card'"))
   })
 
   it('handles a focus session started event with the start message bubble', () => {
@@ -237,7 +237,7 @@ describe('pet-main interactions', () => {
     expect(source).toContain('resolvePetSceneAsset')
     expect(source).toContain("resolvePetSceneAsset(appearance, 'breakDone')")
     expect(source).toContain("selectedSceneRef.current = { appearanceId: appearance.id, scene: 'breakDone', }")
-    expect(source).toContain("key={`${appearance.id}:${currentScene}:${currentAsset ?? 'empty'}`}")
+    expect(source).toContain("key={`${appearance.id}:${currentScene}:${renderedAsset ?? 'empty'}`}")
   })
 
   it('keeps the focus countdown bubble visible and frozen while a break pauses focus', () => {
@@ -256,4 +256,24 @@ describe('pet-main interactions', () => {
     expect(source).toContain("const shouldHideFocusSessionCountdown = breakInteractionState === 'running' || breakInteractionState === 'done'")
     expect(source).toContain('if (shouldHideFocusSessionCountdown || !payload) {')
   })
+
+  it('shows a temporary happy scene on left click and then restores the previous scene after 3 seconds', () => {
+    const source = readNormalizedSource('src/renderer/src/pet-main.tsx')
+
+    expect(source).toContain('const HAPPY_INTERACTION_DURATION_MS = 3000')
+    expect(source).toContain('const [happyInteractionAsset, setHappyInteractionAsset] = useState< string | null >(null)')
+    expect(source).toContain('const happyInteractionTimerRef = useRef<number | null>(null)')
+    expect(source).toContain("const handlePetClick = (event: React.MouseEvent<HTMLDivElement>) => {")
+    expect(source).toContain("if (event.button !== 0 || hasDraggedRef.current || !appearance) {")
+    expect(source).toContain('clearHappyInteractionTimer()')
+    expect(source).toContain("setInteractionScene('happy')")
+    expect(source).toContain("const nextHappyAsset = pickRandomAsset( getPetSceneAssetCandidates(appearance, 'happy'), )")
+    expect(source).toContain('setHappyInteractionAsset(nextHappyAsset ?? null)')
+    expect(source).toContain("const renderedAsset = interactionScene === 'happy' && happyInteractionAsset ? happyInteractionAsset : currentAsset")
+    expect(source).toContain('setHappyInteractionAsset(null)')
+    expect(source).toContain('HAPPY_INTERACTION_DURATION_MS')
+    expect(source).toContain('onClick={handlePetClick}')
+    expect(source).toContain('src={renderedAsset}')
+  })
+
 })

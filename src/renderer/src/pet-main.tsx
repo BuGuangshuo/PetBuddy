@@ -23,6 +23,7 @@ import {
 import { getPetWindowContentWidth } from "./petWindowContentWidth";
 
 const FOCUS_COMPLETION_MESSAGE_DURATION_MS = 3000;
+const HAPPY_INTERACTION_DURATION_MS = 3000;
 const BREAK_PROMPT_TIMEOUT_MS = 10000;
 const HYDRATION_PROMPT_TIMEOUT_MS = 10000;
 const HYDRATION_DEFER_DURATION_MS = 5000;
@@ -102,6 +103,9 @@ const PetApp = () => {
   const [interactionScene, setInteractionScene] = useState<PetSceneKey | null>(
     null,
   );
+  const [happyInteractionAsset, setHappyInteractionAsset] = useState<
+    string | null
+  >(null);
   const [breakInteractionState, setBreakInteractionState] =
     useState<BreakInteractionState>(null);
   const [breakInteractionMessage, setBreakInteractionMessage] = useState<
@@ -118,8 +122,8 @@ const PetApp = () => {
   const [focusNow, setFocusNow] = useState(() => Date.now());
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [petMousePassthrough, setPetMousePassthrough] = useState(true);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const hasDraggedRef = useRef(false);
   const statsUpdatedAtRef = useRef(Date.now());
   const selectedSceneRef = useRef<{
     appearanceId: string;
@@ -128,6 +132,7 @@ const PetApp = () => {
   const hydrationInteractionTimersRef = useRef<number[]>([]);
   const breakInteractionTimersRef = useRef<number[]>([]);
   const deferredBreakTimerRef = useRef<number | null>(null);
+  const happyInteractionTimerRef = useRef<number | null>(null);
   const displayedReminderRef = useRef<ReminderEvent | null>(null);
   const breakRunningFrameRef = useRef<number | null>(null);
   const breakRunningMotionStateRef = useRef<BreakRunningMotionState | null>(
@@ -161,6 +166,13 @@ const PetApp = () => {
     if (deferredBreakTimerRef.current !== null) {
       window.clearTimeout(deferredBreakTimerRef.current);
       deferredBreakTimerRef.current = null;
+    }
+  };
+
+  const clearHappyInteractionTimer = () => {
+    if (happyInteractionTimerRef.current !== null) {
+      window.clearTimeout(happyInteractionTimerRef.current);
+      happyInteractionTimerRef.current = null;
     }
   };
 
@@ -315,6 +327,7 @@ const PetApp = () => {
 
     return () => {
       clearDeferredBreakTimer();
+      clearHappyInteractionTimer();
       clearBreakInteractionTimers();
       clearHydrationInteractionTimers();
       window.clearInterval(syncTimer);
@@ -326,10 +339,6 @@ const PetApp = () => {
     const tick = window.setInterval(() => setFocusNow(Date.now()), 1000);
     return () => window.clearInterval(tick);
   }, []);
-
-  useEffect(() => {
-    void window.petBuddy?.app.setPetMousePassthrough(petMousePassthrough);
-  }, [petMousePassthrough]);
 
   useEffect(() => {
     if (!focusStartMessage) {
@@ -392,6 +401,8 @@ const PetApp = () => {
     : focusCompletionMessage
       ? "focusDone"
       : null;
+  const clickInteractionScene: PetSceneKey | null =
+    interactionScene === "happy" ? interactionScene : null;
   const breakInteractionScene: PetSceneKey | null =
     breakInteractionState === "running"
       ? "breakRunning"
@@ -425,10 +436,14 @@ const PetApp = () => {
         pausedRemainingMs: null,
       },
       interactionScene:
-        breakInteractionScene ?? interactionScene ?? hydrationInteractionScene,
+        clickInteractionScene ??
+        breakInteractionScene ??
+        interactionScene ??
+        hydrationInteractionScene,
     });
   }, [
     appearance,
+    clickInteractionScene,
     breakInteractionScene,
     breakReminder,
     displayedReminder,
@@ -923,6 +938,7 @@ const PetApp = () => {
       return;
     }
 
+    hasDraggedRef.current = false;
     const nextDragOffset = getDragOffsetForMouseDown({
       button: event.button,
       screenX: event.screenX,
@@ -937,8 +953,22 @@ const PetApp = () => {
     dragOffset.current = nextDragOffset;
   };
 
-  const setPetHoverState = (interactive: boolean) => {
-    setPetMousePassthrough(!interactive);
+  const handlePetClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || hasDraggedRef.current || !appearance) {
+      return;
+    }
+
+    clearHappyInteractionTimer();
+    const nextHappyAsset = pickRandomAsset(
+      getPetSceneAssetCandidates(appearance, "happy"),
+    );
+    setInteractionScene("happy");
+    setHappyInteractionAsset(nextHappyAsset ?? null);
+    happyInteractionTimerRef.current = window.setTimeout(() => {
+      setInteractionScene((current) => (current === "happy" ? null : current));
+      setHappyInteractionAsset(null);
+      happyInteractionTimerRef.current = null;
+    }, HAPPY_INTERACTION_DURATION_MS);
   };
 
   useEffect(() => {
@@ -947,6 +977,7 @@ const PetApp = () => {
         return;
       }
 
+      hasDraggedRef.current = true;
       const nextPosition = {
         x: event.screenX - dragOffset.current.x,
         y: event.screenY - dragOffset.current.y,
@@ -983,28 +1014,21 @@ const PetApp = () => {
     );
   }
 
+  const renderedAsset =
+    interactionScene === "happy" && happyInteractionAsset
+      ? happyInteractionAsset
+      : currentAsset;
+
   const messageBubble = focusStartMessage ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{focusStartMessage}</div>
     </div>
   ) : focusCompletionMessage ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{focusCompletionMessage}</div>
     </div>
   ) : breakInteractionMessage ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{breakInteractionMessage}</div>
       {breakInteractionState === "running" ? (
         <div className="pet-bubble-actions">
@@ -1018,19 +1042,11 @@ const PetApp = () => {
       ) : null}
     </div>
   ) : hydrationAutoDeferMessage ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{hydrationAutoDeferMessage}</div>
     </div>
   ) : displayedReminder?.kind === "water" ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{displayedReminder.message}</div>
       <div className="pet-bubble-actions">
         <button
@@ -1048,11 +1064,7 @@ const PetApp = () => {
       </div>
     </div>
   ) : activeEvent?.kind !== "break" && activeEvent ? (
-    <div
-      className="pet-bubble pet-bubble-message"
-      onMouseEnter={() => setPetHoverState(true)}
-      onMouseLeave={() => setPetHoverState(false)}
-    >
+    <div className="pet-bubble pet-bubble-message">
       <div className="pet-bubble-text">{activeEvent.message}</div>
       <div className="pet-bubble-actions">
         <button
@@ -1076,11 +1088,7 @@ const PetApp = () => {
       }}
     >
       <div className="pet-stage">
-        <div
-          className="pet-presence"
-          onMouseEnter={() => setPetHoverState(true)}
-          onMouseLeave={() => setPetHoverState(false)}
-        >
+        <div className="pet-presence">
           <div className="pet-card-anchor">
             {messageBubble}
             {breakReminder ? (
@@ -1110,11 +1118,15 @@ const PetApp = () => {
                 </div>
               </div>
             ) : null}
-            <div className="pet-card" onMouseDown={handleMouseDown}>
-              {currentAsset ? (
+            <div
+              className="pet-card"
+              onMouseDown={handleMouseDown}
+              onClick={handlePetClick}
+            >
+              {renderedAsset ? (
                 <img
-                  key={`${appearance.id}:${currentScene}:${currentAsset ?? "empty"}`}
-                  src={currentAsset}
+                  key={`${appearance.id}:${currentScene}:${renderedAsset ?? "empty"}`}
+                  src={renderedAsset}
                   alt={appearance.displayName}
                 />
               ) : null}

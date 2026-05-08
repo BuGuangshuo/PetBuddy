@@ -13,10 +13,6 @@ export const FOCUS_PRIORITY = 2;
 export const WATER_PRIORITY = 1;
 
 export const DEFAULT_DISTRACTING_APPS = [
-  "com.apple.Safari",
-  "com.google.Chrome",
-  "com.google.Chrome.canary",
-  "com.brave.Browser",
   "org.mozilla.firefox",
   "com.operasoftware.Opera",
   "company.thebrowser.Browser",
@@ -27,7 +23,6 @@ export const DEFAULT_DISTRACTING_APPS = [
   "X",
   "Twitter",
   "Safari",
-  "Google Chrome",
 ];
 
 const DEFAULT_CUSTOM_SCENE_GIFS_SOURCE = Object.freeze({
