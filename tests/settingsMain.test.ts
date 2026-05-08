@@ -2,14 +2,20 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+const readSource = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
+const readNormalizedSource = (path: string) =>
+  readSource(path)
+    .replaceAll('"', "'")
+    .replace(/\s+/g, ' ')
+
 describe('settings-main actions', () => {
   it('renders a dedicated drag region above the settings content', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
-    const styles = readFileSync(join(process.cwd(), 'src/renderer/src/styles.css'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+    const styles = readSource('src/renderer/src/styles.css')
 
-    expect(source).toContain('className="settings-root"')
-    expect(source).toContain('className="settings-drag-region"')
-    expect(source).toContain('className="settings-shell"')
+    expect(source).toContain("className='settings-root'")
+    expect(source).toContain("className='settings-drag-region'")
+    expect(source).toContain("className='settings-shell'")
     expect(styles).toContain('.settings-drag-region {')
     expect(styles).toContain('.settings-root {')
     expect(styles).toContain('-webkit-app-region: drag;')
@@ -21,20 +27,20 @@ describe('settings-main actions', () => {
   })
 
   it('does not expose pause reminders actions', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).not.toContain('pauseReminders')
     expect(source).not.toContain('暂停 1 小时')
   })
 
   it('uses the built-in appearance preview instead of the custom scene resolver for settings chrome', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('resolveAppearancePreviewAsset')
   })
 
   it('shows scene assets only after entering customize mode from the appearance section', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain("const [isAppearanceCustomizing, setIsAppearanceCustomizing] = useState(false)")
     expect(source).toContain("onClick={() => setIsAppearanceCustomizing(true)}")
@@ -42,13 +48,15 @@ describe('settings-main actions', () => {
   })
 
   it('clears the pet-card active state while customize mode is active', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
-    expect(source).toContain('active={!isAppearanceCustomizing && appearance.id === payload.settings.selectedPetAppearance}')
+    expect(source).toContain(
+      'active={ !isAppearanceCustomizing && appearance.id === payload.settings.selectedPetAppearance }',
+    )
   })
 
   it('uses the customize preview resolver for the custom appearance card', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('resolveAppearanceCustomizePreviewAsset')
     expect(source).toContain('const customizePreviewAsset = selectedAppearance')
@@ -56,54 +64,60 @@ describe('settings-main actions', () => {
   })
 
   it('pins built-in scene reference previews to the line-dog appearance', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain("const referenceAppearance = useMemo(")
     expect(source).toContain("item.id === 'line-dog'")
-    expect(source).toContain('const referenceSceneAsset = referenceAppearance?.sceneAssets.find((item) => item.scene === sceneAsset.scene)')
+    expect(source).toContain(
+      'const referenceSceneAsset = referenceAppearance?.sceneAssets.find( (item) => item.scene === sceneAsset.scene, )',
+    )
     expect(source).toContain('referenceSceneAsset?.defaultAssets[0]')
   })
 
   it('omits the sit example from customize scene rows', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain(".filter((sceneAsset) => sceneAsset.scene !== 'sit')")
   })
 
   it('allows 1-minute increments for break and water reminder intervals', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
-    expect(source).toContain('Stepper value={payload.settings.breakIntervalMinutes} unit="分钟" min={1} max={120} step={1}')
-    expect(source).toContain('Stepper value={payload.settings.waterIntervalMinutes} unit="分钟" min={1} max={180} step={1}')
+    expect(source).toContain("value={payload.settings.breakIntervalMinutes} unit='分钟' min={1} max={120} step={1}")
+    expect(source).toContain("value={payload.settings.waterIntervalMinutes} unit='分钟' min={1} max={180} step={1}")
   })
 
   it('shows the water interval control only when hydration reminders are enabled', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
-    expect(source).toContain('const isWaterReminderEnabled = isReminderEnabled(payload.settings.waterIntervalMinutes)')
+    expect(source).toContain(
+      'const isWaterReminderEnabled = isReminderEnabled( payload.settings.waterIntervalMinutes, )',
+    )
     expect(source).toContain('{isWaterReminderEnabled ? (')
-    expect(source).toContain('<div className="field-label">喝水间隔</div>')
+    expect(source).toContain("<div className='field-label'>喝水间隔</div>")
   })
 
   it('shows the break interval control only when break reminders are enabled', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
-    expect(source).toContain('const isBreakReminderEnabled = isReminderEnabled(payload.settings.breakIntervalMinutes)')
+    expect(source).toContain(
+      'const isBreakReminderEnabled = isReminderEnabled( payload.settings.breakIntervalMinutes, )',
+    )
     expect(source).toContain('{isBreakReminderEnabled ? (')
-    expect(source).toContain('<div className="field-label">休息间隔</div>')
+    expect(source).toContain("<div className='field-label'>休息间隔</div>")
   })
 
   it('shows focus detection settings only when focus mode is enabled', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('const isFocusModeEnabled = payload.settings.focusModeEnabled')
     expect(source).toContain('{isFocusModeEnabled ? (')
-    expect(source).toContain('<div className="field-label">检测宽限时间</div>')
-    expect(source).toContain('<div className="field-label">分心应用</div>')
+    expect(source).toContain("<div className='field-label'>检测宽限时间</div>")
+    expect(source).toContain("<div className='field-label'>分心应用</div>")
   })
 
   it('refreshes today stats on an interval while the settings view is open', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('const syncTimer = window.setInterval(() => {')
     expect(source).toContain('window.petBuddy.stats.getToday()')
@@ -112,7 +126,7 @@ describe('settings-main actions', () => {
   })
 
   it('refreshes today stats immediately when pet events that affect stats arrive', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('const unsubscribe = window.petBuddy.pet.onEvent((event) => {')
     expect(source).toContain("event.type === 'reminder'")
@@ -123,18 +137,18 @@ describe('settings-main actions', () => {
   })
 
   it('refreshes permission state when the settings window regains focus after system changes', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('window.petBuddy.permissions.getAccessibilityStatus()')
-    expect(source).toContain('window.addEventListener("focus", syncPermissionState)')
-    expect(source).toContain('document.addEventListener("visibilitychange", handleVisibilityChange)')
-    expect(source).toContain('document.visibilityState === "visible"')
-    expect(source).toContain('window.removeEventListener("focus", syncPermissionState)')
-    expect(source).toContain('document.removeEventListener("visibilitychange", handleVisibilityChange)')
+    expect(source).toContain("window.addEventListener('focus', syncPermissionState)")
+    expect(source).toContain("document.addEventListener('visibilitychange', handleVisibilityChange)")
+    expect(source).toContain("document.visibilityState === 'visible'")
+    expect(source).toContain("window.removeEventListener('focus', syncPermissionState)")
+    expect(source).toContain("document.removeEventListener('visibilitychange', handleVisibilityChange)")
   })
 
   it('polls permission state while the settings window stays open so revoked access reappears', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('const permissionSyncTimer = window.setInterval(() => {')
     expect(source).toContain('void syncPermissionState()')
@@ -142,7 +156,7 @@ describe('settings-main actions', () => {
   })
 
   it('shows focus stats from accumulated completed time plus the active session elapsed time', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('getElapsedFocusSessionSeconds')
     expect(source).toContain('stats.focusDurationSeconds')
@@ -150,19 +164,19 @@ describe('settings-main actions', () => {
   })
 
   it('treats a paused focus session as still visible in the settings focus stats surface', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain("payload.focusSession.status === 'paused'")
   })
 
   it('shows water stats from acknowledged completions instead of shown reminders', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).toContain('value={stats.acknowledged.water}')
   })
 
   it('does not show a language selector in the settings panel', () => {
-    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).not.toContain('<div className="field-label">语言</div>')
     expect(source).not.toContain('<select className="select" defaultValue="zh-CN">')
