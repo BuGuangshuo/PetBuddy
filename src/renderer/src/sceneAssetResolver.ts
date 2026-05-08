@@ -16,6 +16,10 @@ const pickFirst = (values: string[]): string | undefined => values[0]
 export const resolveAppearancePreviewAsset = (appearance: RendererPetAppearance): string | undefined => {
   const defaultSceneAsset = findSceneAsset(appearance, 'default')
 
+  if (defaultSceneAsset?.customAsset) {
+    return defaultSceneAsset.customAsset
+  }
+
   if (defaultSceneAsset?.defaultAssets.length) {
     return pickFirst(defaultSceneAsset.defaultAssets)
   }

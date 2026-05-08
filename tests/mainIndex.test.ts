@@ -9,4 +9,25 @@ describe('main process activation behavior', () => {
     expect(source).not.toContain("app.on('activate'")
     expect(source).not.toContain('windows.shouldShowSettingsOnActivate()')
   })
+
+  it('resolves built-in pet assets from the packaged app path', () => {
+    const source = readFileSync(join(process.cwd(), 'src/main/index.ts'), 'utf8')
+
+    expect(source).toContain("join(app.getAppPath(), 'pet_assets')")
+    expect(source).not.toContain("join(process.resourcesPath, 'pet_assets')")
+  })
+
+  it('disables the macOS safe storage keychain prompt at startup', () => {
+    const source = readFileSync(join(process.cwd(), 'src/main/index.ts'), 'utf8')
+
+    expect(source).toContain("app.commandLine.appendSwitch('use-mock-keychain')")
+  })
+
+  it('moves the pet to the primary screen bottom-right on first launch before creating the window', () => {
+    const source = readFileSync(join(process.cwd(), 'src/main/index.ts'), 'utf8')
+
+    expect(source).toContain('if (store.isFirstLaunch())')
+    expect(source).toContain('store.updateSettings({ petPosition: windows.getDefaultPetPosition() })')
+    expect(source).toContain('windows.createPetWindow(store.getSettings().petPosition)')
+  })
 })

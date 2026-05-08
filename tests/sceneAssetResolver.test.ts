@@ -158,7 +158,7 @@ describe('resolvePetSceneAsset', () => {
     expect(resolvePetSceneAsset(appearance, 'happy')).toBe('scene-default.gif')
   })
 
-  test('keeps settings preview on the built-in default asset when a custom default exists', () => {
+  test('uses the uploaded default scene asset for settings previews', () => {
     const withCustomDefault: RendererPetAppearance = {
       ...appearance,
       sceneAssets: appearance.sceneAssets.map((sceneAsset) =>
@@ -168,7 +168,7 @@ describe('resolvePetSceneAsset', () => {
       )
     }
 
-    expect(resolveAppearancePreviewAsset(withCustomDefault)).toBe('scene-default.gif')
+    expect(resolveAppearancePreviewAsset(withCustomDefault)).toBe('custom-default.gif')
   })
 
   test('uses the uploaded default scene asset for the customize-card preview', () => {

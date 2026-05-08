@@ -170,6 +170,16 @@ describe('WindowManager', () => {
     expect(petWindowSetIgnoreMouseEvents).toHaveBeenCalledWith(true, { forward: true })
   })
 
+  it('calculates the first-launch pet position from the primary display bottom-right corner', async () => {
+    const { WindowManager } = await import('../src/main/services/windowManager')
+    const manager = new WindowManager('/tmp/preload.js')
+
+    expect(manager.getDefaultPetPosition()).toEqual({
+      x: 1264,
+      y: 580
+    })
+  })
+
   it('can toggle pet mouse passthrough at runtime', async () => {
     const { WindowManager } = await import('../src/main/services/windowManager')
     const manager = new WindowManager('/tmp/preload.js')
@@ -271,6 +281,7 @@ describe('WindowManager', () => {
     manager.showPetContextMenu({
       onOpenSettings: vi.fn(),
       onHydrationComplete: vi.fn(),
+      onStartBreak: vi.fn(),
       onToggleFocus: vi.fn(),
       onTogglePet: vi.fn(),
       focusSessionActive: false
@@ -290,6 +301,7 @@ describe('WindowManager', () => {
     manager.showPetContextMenu({
       onOpenSettings: vi.fn(),
       onHydrationComplete: vi.fn(),
+      onStartBreak: vi.fn(),
       onToggleFocus: vi.fn(),
       onTogglePet: vi.fn(),
       focusSessionActive: false
@@ -311,6 +323,7 @@ describe('WindowManager', () => {
     manager.showPetContextMenu({
       onOpenSettings: vi.fn(),
       onHydrationComplete,
+      onStartBreak: vi.fn(),
       onToggleFocus: vi.fn(),
       onTogglePet: vi.fn(),
       focusSessionActive: false
@@ -328,6 +341,34 @@ describe('WindowManager', () => {
     expect(onHydrationComplete).toHaveBeenCalledTimes(1)
   })
 
+  it('shows 我休息会 in the pet context menu and wires it to the break callback', async () => {
+    const { WindowManager } = await import('../src/main/services/windowManager')
+    const manager = new WindowManager('/tmp/preload.js')
+    const onStartBreak = vi.fn()
+
+    ;(manager as unknown as { petWindow: typeof petWindow }).petWindow = petWindow
+
+    manager.showPetContextMenu({
+      onOpenSettings: vi.fn(),
+      onHydrationComplete: vi.fn(),
+      onStartBreak,
+      onToggleFocus: vi.fn(),
+      onTogglePet: vi.fn(),
+      focusSessionActive: false
+    })
+
+    const [template] = buildFromTemplate.mock.calls.at(-1) ?? [[]]
+    const breakItem = (template as Array<{ label?: string; click?: () => void }>).find(
+      (item) => item.label === '我休息会'
+    )
+
+    expect(breakItem).toBeDefined()
+
+    breakItem?.click?.()
+
+    expect(onStartBreak).toHaveBeenCalledTimes(1)
+  })
+
   it('shows end focus when a focus session is active', async () => {
     const { WindowManager } = await import('../src/main/services/windowManager')
     const manager = new WindowManager('/tmp/preload.js')
@@ -337,6 +378,7 @@ describe('WindowManager', () => {
     manager.showPetContextMenu({
       onOpenSettings: vi.fn(),
       onHydrationComplete: vi.fn(),
+      onStartBreak: vi.fn(),
       onToggleFocus: vi.fn(),
       onTogglePet: vi.fn(),
       focusSessionActive: true

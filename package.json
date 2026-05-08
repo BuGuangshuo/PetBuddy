@@ -18,9 +18,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "package": "pnpm build && electron-builder --mac --arm64"
+    "package": "pnpm build && electron-builder --mac --arm64 --publish never",
+    "package:release": "pnpm build && electron-builder --mac --arm64 --publish never -c.forceCodeSigning=true"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.2.2",
     "electron-store": "11.0.2",
     "electron-updater": "6.8.3",
     "react": "19.2.6",
@@ -44,6 +46,7 @@
   "build": {
     "appId": "com.alanbu.petbuddy",
     "productName": "PetBuddy",
+    "electronDist": "node_modules/electron/dist",
     "files": [
       "out/**/*",
       "package.json",
@@ -53,7 +56,13 @@
       "buildResources": "build"
     },
     "mac": {
+      "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": true,
       "target": [
         {
           "target": "dmg",

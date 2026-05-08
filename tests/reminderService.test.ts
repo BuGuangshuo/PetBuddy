@@ -99,4 +99,40 @@ describe('ReminderService', () => {
 
     service.stop()
   })
+
+  test('resets the break cadence when a manual break starts before the next reminder is due', () => {
+    const shown: ReminderEvent[] = []
+    const service = new ReminderService({
+      getSettings: () => ({
+        breakIntervalMinutes: 50,
+        breakRemindersMutedOnDate: null,
+        waterIntervalMinutes: 9999,
+        focusSessionMinutes: 25,
+        focusModeEnabled: false,
+        focusGraceSeconds: 20,
+        launchAtLogin: false,
+        checkUpdatesOnStartup: false,
+        selectedPetAppearance: 'line-dog',
+        petPosition: { x: 48, y: 48 },
+        distractingApps: [],
+        onboardingCompleted: false,
+        customSceneGifs: {}
+      }),
+      onReminder: (event) => shown.push(event),
+      onReminderFinished: () => undefined
+    })
+
+    service.start()
+
+    vi.advanceTimersByTime(49 * 60 * 1000)
+    service.completeBreak()
+
+    vi.advanceTimersByTime(60 * 1000)
+    expect(shown).toHaveLength(0)
+
+    vi.advanceTimersByTime(49 * 60 * 1000)
+    expect(shown).toHaveLength(1)
+
+    service.stop()
+  })
 })

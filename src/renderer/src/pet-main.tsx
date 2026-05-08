@@ -266,6 +266,10 @@ const PetApp = () => {
         runHydrationCompleteSequence();
       }
 
+      if (event.type === "break-started") {
+        startBreakRunning();
+      }
+
       if (event.type === "appearance-changed") {
         setAppearance(event.appearance);
       }
@@ -591,6 +595,20 @@ const PetApp = () => {
   };
 
   const handleBreakAccept = (reminderId: string) => {
+    acknowledgeBreakReminderIfNeeded(reminderId);
+    startBreakRunning();
+  };
+
+  const startBreakRunning = () => {
+    const reminder = displayedReminderRef.current;
+
+    if (reminder?.kind === "break") {
+      acknowledgeReminder(reminder.id);
+    } else {
+      clearPendingBreakEvent();
+      setActiveEvent((current) => (current?.kind === "break" ? null : current));
+    }
+
     if (payload?.focusSession.status === "active") {
       void window.petBuddy.app
         .pauseFocusSessionForBreak()
@@ -600,7 +618,8 @@ const PetApp = () => {
     }
     clearDeferredBreakTimer();
     setDeferredBreakReminder(null);
-    acknowledgeBreakReminderIfNeeded(reminderId);
+    setActiveEvent(null);
+    clearPendingHydrationEvent();
     clearBreakInteractionTimers();
     clearHydrationInteractionTimers();
     setHydrationInteractionScene(null);

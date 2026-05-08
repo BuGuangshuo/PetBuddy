@@ -171,6 +171,7 @@ describe('pet-main interactions', () => {
   it('drives break interaction scenes with breakRunning and a continuous movement loop', () => {
     const source = readFileSync(join(process.cwd(), 'src/renderer/src/pet-main.tsx'), 'utf8')
 
+    expect(source).toContain('const startBreakRunning = () => {')
     expect(source).toContain("setInteractionScene('breakRunning')")
     expect(source).toContain("setInteractionScene('breakDone')")
     expect(source).toContain("setInteractionScene('sad')")
@@ -184,6 +185,13 @@ describe('pet-main interactions', () => {
     expect(source).toContain('requestAnimationFrame')
     expect(source).not.toContain('BREAK_RUNNING_MOVE_INTERVAL_MS = 1200')
     expect(source).not.toContain('movePetToRandomNearbyPosition()')
+  })
+
+  it('allows the main process to start breakRunning directly from a pet event', () => {
+    const source = readFileSync(join(process.cwd(), 'src/renderer/src/pet-main.tsx'), 'utf8')
+
+    expect(source).toContain('if (event.type === "break-started")')
+    expect(source).toContain('startBreakRunning();')
   })
 
   it('switches the break visual state to breakDone immediately when the user returns', () => {

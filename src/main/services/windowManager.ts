@@ -5,6 +5,23 @@ import { buildMacApplicationMenuTemplate } from './menuTemplates'
 
 const PET_WIDTH = 176
 const PET_HEIGHT = 320
+type WorkAreaBounds = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+const clampPetPositionToBounds = (position: PetPosition, bounds: WorkAreaBounds): PetPosition => ({
+  x: Math.min(Math.max(position.x, bounds.x), bounds.x + bounds.width - PET_WIDTH),
+  y: Math.min(Math.max(position.y, bounds.y), bounds.y + bounds.height - PET_HEIGHT)
+})
+
+const getBottomRightPetPosition = (bounds: WorkAreaBounds): PetPosition => ({
+  x: bounds.x + bounds.width - PET_WIDTH,
+  y: bounds.y + bounds.height - PET_HEIGHT
+})
+
 const trayIconSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="18" fill="#F5EFE6"/>
@@ -25,15 +42,17 @@ export class WindowManager {
 
   constructor(private readonly preloadPath: string) {}
 
+  getDefaultPetPosition(): PetPosition {
+    return getBottomRightPetPosition(screen.getPrimaryDisplay().workArea)
+  }
+
   createPetWindow(position: PetPosition): BrowserWindow {
     if (this.petWindow) {
       return this.petWindow
     }
 
     const primaryDisplay = screen.getPrimaryDisplay()
-    const bounds = primaryDisplay.workArea
-    const x = bounds.x + Math.min(Math.max(position.x, 0), bounds.width - PET_WIDTH)
-    const y = bounds.y + Math.min(Math.max(position.y, 0), bounds.height - PET_HEIGHT)
+    const { x, y } = clampPetPositionToBounds(position, primaryDisplay.workArea)
 
     this.petWindow = new BrowserWindow({
       width: PET_WIDTH,
@@ -181,6 +200,7 @@ export class WindowManager {
   showPetContextMenu(actions: {
     onOpenSettings: () => void
     onHydrationComplete: () => void
+    onStartBreak: () => void
     onToggleFocus: () => void
     onTogglePet: () => void
     focusSessionActive: boolean
@@ -192,6 +212,7 @@ export class WindowManager {
     const menu = Menu.buildFromTemplate([
       { label: '打开设置', click: actions.onOpenSettings },
       { label: '我喝水了', click: actions.onHydrationComplete },
+      { label: '我休息会', click: actions.onStartBreak },
       { label: actions.focusSessionActive ? '结束专注' : '开始专注', click: actions.onToggleFocus },
       { type: 'separator' },
       { label: this.petWindow.isVisible() ? '隐藏小狗' : '显示小狗', click: actions.onTogglePet }
@@ -248,9 +269,7 @@ export class WindowManager {
     }
 
     const display = screen.getDisplayNearestPoint({ x: position.x, y: position.y })
-    const bounds = display.workArea
-    const x = Math.min(Math.max(position.x, bounds.x), bounds.x + bounds.width - PET_WIDTH)
-    const y = Math.min(Math.max(position.y, bounds.y), bounds.y + bounds.height - PET_HEIGHT)
+    const { x, y } = clampPetPositionToBounds(position, display.workArea)
     this.petWindow.setPosition(x, y)
   }
 

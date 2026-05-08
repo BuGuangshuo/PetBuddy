@@ -122,6 +122,25 @@ describe('settings-main actions', () => {
     expect(source).toContain('unsubscribe()')
   })
 
+  it('refreshes permission state when the settings window regains focus after system changes', () => {
+    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+
+    expect(source).toContain('window.petBuddy.permissions.getAccessibilityStatus()')
+    expect(source).toContain('window.addEventListener("focus", syncPermissionState)')
+    expect(source).toContain('document.addEventListener("visibilitychange", handleVisibilityChange)')
+    expect(source).toContain('document.visibilityState === "visible"')
+    expect(source).toContain('window.removeEventListener("focus", syncPermissionState)')
+    expect(source).toContain('document.removeEventListener("visibilitychange", handleVisibilityChange)')
+  })
+
+  it('polls permission state while the settings window stays open so revoked access reappears', () => {
+    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+
+    expect(source).toContain('const permissionSyncTimer = window.setInterval(() => {')
+    expect(source).toContain('void syncPermissionState()')
+    expect(source).toContain('window.clearInterval(permissionSyncTimer)')
+  })
+
   it('shows focus stats from accumulated completed time plus the active session elapsed time', () => {
     const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
 
@@ -140,5 +159,12 @@ describe('settings-main actions', () => {
     const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
 
     expect(source).toContain('value={stats.acknowledged.water}')
+  })
+
+  it('does not show a language selector in the settings panel', () => {
+    const source = readFileSync(join(process.cwd(), 'src/renderer/src/settings-main.tsx'), 'utf8')
+
+    expect(source).not.toContain('<div className="field-label">语言</div>')
+    expect(source).not.toContain('<select className="select" defaultValue="zh-CN">')
   })
 })
