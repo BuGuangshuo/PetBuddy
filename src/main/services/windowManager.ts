@@ -75,7 +75,7 @@ export class WindowManager {
 
     this.petWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false })
     this.petWindow.setAlwaysOnTop(true, 'screen-saver')
-    this.petWindow.setIgnoreMouseEvents(true, { forward: true })
+    this.petWindow.setIgnoreMouseEvents(false)
     this.syncPetWindowFocusability()
     this.petWindow.on('show', () => this.refreshApplicationMenu())
     this.petWindow.on('hide', () => this.refreshApplicationMenu())

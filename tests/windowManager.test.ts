@@ -154,7 +154,7 @@ describe('WindowManager', () => {
     expect(trayOn).not.toHaveBeenCalledWith('click', expect.any(Function))
   })
 
-  it('creates a tighter pet window and ignores mouse events until the pet is hovered', async () => {
+  it('creates a tighter pet window and keeps mouse interactions enabled by default', async () => {
     const { BrowserWindow } = await import('electron')
     const { WindowManager } = await import('../src/main/services/windowManager')
     const manager = new WindowManager('/tmp/preload.js')
@@ -167,7 +167,7 @@ describe('WindowManager', () => {
         height: 320
       })
     )
-    expect(petWindowSetIgnoreMouseEvents).toHaveBeenCalledWith(true, { forward: true })
+    expect(petWindowSetIgnoreMouseEvents).toHaveBeenCalledWith(false)
   })
 
   it('calculates the first-launch pet position from the primary display bottom-right corner', async () => {
@@ -188,6 +188,7 @@ describe('WindowManager', () => {
     manager.setPetWindowMousePassthrough(false)
     manager.setPetWindowMousePassthrough(true)
 
+    expect(petWindowSetIgnoreMouseEvents).toHaveBeenNthCalledWith(1, false)
     expect(petWindowSetIgnoreMouseEvents).toHaveBeenNthCalledWith(2, false)
     expect(petWindowSetIgnoreMouseEvents).toHaveBeenNthCalledWith(3, true, { forward: true })
   })
