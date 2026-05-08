@@ -268,6 +268,7 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
 }
 
 .primary-button {
@@ -540,6 +541,14 @@ select {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .toggle {

@@ -419,39 +419,32 @@ const SettingsApp = () => {
             />
           </div>
 
-          {showOnboarding || payload.permissionState !== "granted" ? (
+          {showOnboarding ? (
             <div className="notice">
               <div>
                 <strong>欢迎使用 PetBuddy</strong>
                 <p>
                   PetBuddy
-                  会待在菜单栏和屏幕上，定时提醒你休息、喝水和保持节奏。
-                  {payload.permissionState !== "granted"
-                    ? " 当前还没有辅助功能权限，专注检测暂时不会生效。"
-                    : " 你已经可以开始使用提醒功能。"}
+                  会定时提醒你休息、喝水和保持节奏。分心检测功能需打开系统辅助功能权限。
                 </p>
               </div>
-              <div className="inline-row">
-                {payload.permissionState !== "granted" ? (
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      void window.petBuddy.permissions.openAccessibilitySettings()
-                    }
-                  >
-                    打开权限设置
-                  </button>
-                ) : null}
-                {showOnboarding ? (
-                  <button
-                    className="primary-button"
-                    onClick={() =>
-                      void updateSettings({ onboardingCompleted: true })
-                    }
-                  >
-                    知道了
-                  </button>
-                ) : null}
+              <div className="notice-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    void window.petBuddy.permissions.openAccessibilitySettings()
+                  }
+                >
+                  打开权限设置
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    void updateSettings({ onboardingCompleted: true })
+                  }
+                >
+                  知道了
+                </button>
               </div>
             </div>
           ) : null}
@@ -785,22 +778,6 @@ const SettingsApp = () => {
                   />
                 </div>
               </div>
-              <div className="field-row horizontal">
-                <div>
-                  <div className="field-label">启动时检查更新</div>
-                  <div className="field-hint">
-                    关闭后只会在你手动检查时访问 GitHub Releases。
-                  </div>
-                </div>
-                <div className="field-control">
-                  <Toggle
-                    checked={payload.settings.checkUpdatesOnStartup}
-                    onChange={(checked) =>
-                      void updateSettings({ checkUpdatesOnStartup: checked })
-                    }
-                  />
-                </div>
-              </div>
             </div>
           </section>
 
@@ -814,40 +791,6 @@ const SettingsApp = () => {
                     <div className="about-text">当前版本</div>
                   </div>
                   <strong>{payload.version}</strong>
-                </div>
-                <div className="about-row">
-                  <div>
-                    <div className="about-title">更新</div>
-                    <div className="about-text">
-                      {payload.updateState.message}
-                    </div>
-                  </div>
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      void window.petBuddy.updates
-                        .checkNow()
-                        .then(() => void load())
-                    }
-                  >
-                    检查更新
-                  </button>
-                </div>
-                <div className="about-row">
-                  <div>
-                    <div className="about-title">更新说明</div>
-                    <div className="about-text">
-                      在浏览器中打开 GitHub Releases。
-                    </div>
-                  </div>
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      void window.petBuddy.updates.openReleasesPage()
-                    }
-                  >
-                    打开 Releases
-                  </button>
                 </div>
                 <div className="about-row">
                   <div>

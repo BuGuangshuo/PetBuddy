@@ -181,4 +181,45 @@ describe('settings-main actions', () => {
     expect(source).not.toContain('<div className="field-label">语言</div>')
     expect(source).not.toContain('<select className="select" defaultValue="zh-CN">')
   })
+
+  it('temporarily hides update actions from the about panel', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+
+    expect(source).not.toContain('<div className="about-title">更新</div>')
+    expect(source).not.toContain('<div className="about-title">更新说明</div>')
+    expect(source).not.toContain('window.petBuddy.updates')
+    expect(source).not.toContain('{payload.updateState.message}')
+    expect(source).not.toContain('打开 Releases')
+  })
+
+  it('temporarily hides the startup update toggle from the system panel', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+
+    expect(source).not.toContain('<div className="field-label">启动时检查更新</div>')
+    expect(source).not.toContain('payload.settings.checkUpdatesOnStartup')
+    expect(source).not.toContain('updateSettings({ checkUpdatesOnStartup: checked })')
+  })
+
+  it('shows the onboarding notice only until the user dismisses it once', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+
+    expect(source).toContain('const showOnboarding = !payload.settings.onboardingCompleted')
+    expect(source).toContain('{showOnboarding ? (')
+    expect(source).not.toContain('showOnboarding || payload.permissionState !== \'granted\'')
+    expect(source).toContain("void updateSettings({ onboardingCompleted: true })")
+  })
+
+  it('renders a fixed two-button onboarding action row with the updated permission copy', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+    const styles = readSource('src/renderer/src/styles.css')
+
+    expect(source).toContain('PetBuddy 会定时提醒你休息、喝水和保持节奏。分心检测功能需打开系统辅助功能权限。')
+    expect(source).toContain("className='notice-actions'")
+    expect(source).toContain('打开权限设置')
+    expect(source).toContain('知道了')
+    expect(source).not.toContain('? " 当前还没有辅助功能权限，专注检测暂时不会生效。"')
+    expect(styles).toContain('.notice-actions {')
+    expect(styles).toContain('flex-wrap: nowrap;')
+    expect(styles).toContain('white-space: nowrap;')
+  })
 })

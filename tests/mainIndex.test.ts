@@ -35,4 +35,10 @@ describe('main process activation behavior', () => {
     expect(source).toContain('store.updateSettings({ petPosition: windows.getDefaultPetPosition() })')
     expect(source).toContain('windows.createPetWindow(store.getSettings().petPosition)')
   })
+
+  it('does not auto-open settings on first launch', () => {
+    const source = readNormalizedSource('src/main/index.ts')
+
+    expect(source).not.toContain("if (store.isFirstLaunch()) { windows.showSettings(); }")
+  })
 })

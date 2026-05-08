@@ -474,10 +474,6 @@ const main = async (): Promise<void> => {
     },
   });
 
-  if (store.isFirstLaunch()) {
-    windows.showSettings();
-  }
-
   if (store.getSettings().checkUpdatesOnStartup) {
     void updateService.checkNow();
   }
