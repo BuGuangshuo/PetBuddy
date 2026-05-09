@@ -7,7 +7,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import type { RendererPetAppearance, SettingsPayload } from "@shared/api";
-import type { AppSettings, DailyStats } from "@shared/types";
+import type { AppSettings, DailyStats, UpdateState } from "@shared/types";
 import { getElapsedFocusSessionSeconds } from "@shared/focusSession";
 import "./styles.css";
 import {
@@ -47,14 +47,52 @@ const Stepper = ({
   max: number;
   step: number;
   onChange: (next: number) => void;
-}) => (
-  <div className="stepper">
-    <button onClick={() => onChange(clamp(value - step, min, max))}>−</button>
-    <span className="stepper-value">{value}</span>
-    <span className="stepper-unit">{unit}</span>
-    <button onClick={() => onChange(clamp(value + step, min, max))}>＋</button>
-  </div>
-);
+}) => {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commitDraft = () => {
+    const normalized = Number.parseInt(draft.trim(), 10);
+    if (Number.isNaN(normalized)) {
+      setDraft(String(value));
+      return;
+    }
+
+    const next = clamp(normalized, min, max);
+    setDraft(String(next));
+    if (next !== value) {
+      onChange(next);
+    }
+  };
+
+  return (
+    <div className="stepper">
+      <button onClick={() => onChange(clamp(value - step, min, max))}>−</button>
+      <input
+        className="stepper-input"
+        value={draft}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        aria-label={`${unit}数值`}
+        onChange={(event) =>
+          setDraft(event.target.value.replaceAll(/[^\d]/g, ""))
+        }
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commitDraft();
+          }
+        }}
+      />
+      <span className="stepper-unit">{unit}</span>
+      <button onClick={() => onChange(clamp(value + step, min, max))}>＋</button>
+    </div>
+  );
+};
 
 const ChipEditor = ({
   values,
@@ -169,6 +207,13 @@ const SettingsApp = () => {
     );
   };
 
+  const applyUpdateState = (nextUpdateState: UpdateState) => {
+    setPayload((current) =>
+      current ? { ...current, updateState: nextUpdateState } : current,
+    );
+    setError(null);
+  };
+
   const syncTodayStats = async () => {
     if (!window.petBuddy) {
       setError("preload API not available");
@@ -251,6 +296,11 @@ const SettingsApp = () => {
         );
       }
     });
+    const unsubscribeUpdateState = window.petBuddy.updates.onStateChanged(
+      (nextUpdateState) => {
+        applyUpdateState(nextUpdateState);
+      },
+    );
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -275,6 +325,7 @@ const SettingsApp = () => {
 
     return () => {
       unsubscribe();
+      unsubscribeUpdateState();
       window.removeEventListener("focus", syncPermissionState);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.clearInterval(permissionSyncTimer);
@@ -295,6 +346,14 @@ const SettingsApp = () => {
   const runPayloadAction = async (action: Promise<SettingsPayload>) => {
     try {
       applyPayload(await action);
+    } catch (actionError) {
+      handleActionError(actionError);
+    }
+  };
+
+  const runUpdateAction = async (action: Promise<UpdateState>) => {
+    try {
+      applyUpdateState(await action);
     } catch (actionError) {
       handleActionError(actionError);
     }
@@ -371,6 +430,14 @@ const SettingsApp = () => {
   const displayedFocusMinutes = Math.floor(
     (stats.focusDurationSeconds + activeFocusSeconds) / 60,
   );
+  const updateActionLabel =
+    payload.updateState.status === "available" ? "立即更新" : "检查更新";
+  const updateActionDisabled =
+    !payload.updateState.canCheck ||
+    payload.updateState.status === "checking" ||
+    payload.updateState.status === "downloading" ||
+    payload.updateState.status === "downloaded";
+  const showUpdateProgress = payload.updateState.status === "downloading";
 
   return (
     <div className="settings-root">
@@ -802,6 +869,37 @@ const SettingsApp = () => {
                     </div>
                   </div>
                   <strong>{payload.isMacArm64 ? "已支持" : "未支持"}</strong>
+                </div>
+                <div className="about-row about-row-update">
+                  <div>
+                    <div className="about-title">更新</div>
+                    <div className="about-text">{payload.updateState.message}</div>
+                    {showUpdateProgress ? (
+                      <div className="update-progress" aria-label="下载进度">
+                        <div
+                          className="update-progress-bar"
+                          style={{
+                            width: `${payload.updateState.downloadPercent ?? 0}%`,
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="about-actions">
+                    <button
+                      className="primary-button"
+                      disabled={updateActionDisabled}
+                      onClick={() =>
+                        void runUpdateAction(
+                          payload.updateState.status === "available"
+                            ? window.petBuddy.updates.download()
+                            : window.petBuddy.updates.checkNow(),
+                        )
+                      }
+                    >
+                      {updateActionLabel}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

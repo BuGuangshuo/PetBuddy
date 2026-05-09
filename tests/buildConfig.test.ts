@@ -37,6 +37,10 @@ describe('macOS packaging configuration', () => {
       {
         target: 'dmg',
         arch: ['arm64']
+      },
+      {
+        target: 'zip',
+        arch: ['arm64']
       }
     ])
   })

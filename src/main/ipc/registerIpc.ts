@@ -46,6 +46,7 @@ interface RegisterIpcOptions {
   setPetMousePassthrough: (enabled: boolean) => Promise<void> | void;
   setPetWindowContentWidth: (width: number) => Promise<void> | void;
   checkUpdates: () => Promise<UpdateState>;
+  downloadUpdate: () => Promise<UpdateState>;
   getUpdateStatus: () => Promise<UpdateState> | UpdateState;
   openReleasesPage: () => Promise<void> | void;
   getTodayStats: () => Promise<DailyStats> | DailyStats;
@@ -122,6 +123,7 @@ export const registerIpc = (options: RegisterIpcOptions): void => {
     (_event, width: number) => options.setPetWindowContentWidth(width),
   );
   ipcMain.handle(IPC_CHANNELS.updatesCheck, () => options.checkUpdates());
+  ipcMain.handle(IPC_CHANNELS.updatesDownload, () => options.downloadUpdate());
   ipcMain.handle(IPC_CHANNELS.updatesStatus, () => options.getUpdateStatus());
   ipcMain.handle(IPC_CHANNELS.updatesOpenReleases, () =>
     options.openReleasesPage(),

@@ -60,7 +60,17 @@ const api: PetBuddyApi = {
   },
   updates: {
     checkNow: () => ipcRenderer.invoke(IPC_CHANNELS.updatesCheck),
+    download: () => ipcRenderer.invoke(IPC_CHANNELS.updatesDownload),
     getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.updatesStatus),
+    onStateChanged: (listener) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        payload: Parameters<typeof listener>[0],
+      ) => listener(payload);
+      ipcRenderer.on(IPC_CHANNELS.updatesStateChanged, wrapped);
+      return () =>
+        ipcRenderer.removeListener(IPC_CHANNELS.updatesStateChanged, wrapped);
+    },
     openReleasesPage: () =>
       ipcRenderer.invoke(IPC_CHANNELS.updatesOpenReleases),
   },

@@ -20,7 +20,7 @@ import {
   isFocusSessionActive,
 } from "@shared/focusSession";
 import type { AppSettings, PetPosition, ReminderKind } from "@shared/types";
-import type { RendererPetAppearance, SettingsPayload } from "@shared/api";
+import { IPC_CHANNELS, type RendererPetAppearance, type SettingsPayload } from "@shared/api";
 
 const isMacArm64 = process.platform === "darwin" && process.arch === "arm64";
 const FOCUS_DONE_DURATION_MS = 3000;
@@ -62,7 +62,7 @@ const main = async (): Promise<void> => {
   app.dock?.hide();
 
   const store = new PetBuddyStore();
-  const updateService = new UpdateService();
+  const updateService = new UpdateService(store.getAppVersion());
   const preloadPath = join(__dirname, "../preload/index.mjs");
   const windows = new WindowManager(preloadPath);
   const assetRoot = app.isPackaged
@@ -254,6 +254,13 @@ const main = async (): Promise<void> => {
     updateState: updateService.getState(),
     version: store.getAppVersion(),
     isMacArm64,
+  });
+
+  updateService.onStateChanged((nextUpdateState) => {
+    windows.settingsWindow?.webContents.send(
+      IPC_CHANNELS.updatesStateChanged,
+      nextUpdateState,
+    );
   });
 
   const emitAppearanceChanged = (
@@ -464,6 +471,7 @@ const main = async (): Promise<void> => {
       windows.setPetWindowContentWidth(width);
     },
     checkUpdates: async () => updateService.checkNow(),
+    downloadUpdate: async () => updateService.downloadUpdate(),
     getUpdateStatus: () => updateService.getState(),
     openReleasesPage: async () => updateService.openReleasesPage(),
     getTodayStats: () => store.getTodayStats(),

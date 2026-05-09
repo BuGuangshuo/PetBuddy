@@ -1,7 +1,15 @@
 export type ReminderKind = 'break' | 'water' | 'focusNudge'
 export type PetAnimation = 'idle' | 'run' | 'nudge' | 'drink' | 'rest'
 export type PermissionState = 'unknown' | 'granted' | 'denied'
-export type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'error'
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'not-available'
+  | 'unavailable'
+  | 'error'
 export type PetAppearanceId = 'line-dog' | 'golden-puppy'
 export type PetSceneKey =
   | 'default'
@@ -136,4 +144,8 @@ export interface StoreShape {
 export interface UpdateState {
   status: UpdateStatus
   message: string
+  currentVersion: string
+  availableVersion: string | null
+  downloadPercent: number | null
+  canCheck: boolean
 }

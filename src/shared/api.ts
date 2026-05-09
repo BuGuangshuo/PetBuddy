@@ -88,7 +88,9 @@ export interface PetBuddyApi {
   };
   updates: {
     checkNow(): Promise<UpdateState>;
+    download(): Promise<UpdateState>;
     getStatus(): Promise<UpdateState>;
+    onStateChanged(listener: (state: UpdateState) => void): () => void;
     openReleasesPage(): Promise<void>;
   };
   stats: {
@@ -124,7 +126,9 @@ export const IPC_CHANNELS = {
   appSetPetMousePassthrough: "app:set-pet-mouse-passthrough",
   appSetPetWindowContentWidth: "app:set-pet-window-content-width",
   updatesCheck: "updates:check",
+  updatesDownload: "updates:download",
   updatesStatus: "updates:status",
+  updatesStateChanged: "updates:state-changed",
   updatesOpenReleases: "updates:open-releases",
   statsToday: "stats:today",
   statsRecent: "stats:recent",

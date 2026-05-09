@@ -87,6 +87,22 @@ describe('settings-main actions', () => {
     expect(source).toContain("value={payload.settings.waterIntervalMinutes} unit='分钟' min={1} max={180} step={1}")
   })
 
+  it('allows custom numeric input for break, water, and focus minute settings', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+    const styles = readSource('src/renderer/src/styles.css')
+
+    expect(source).toContain("inputMode='numeric'")
+    expect(source).toContain("value={draft}")
+    expect(source).toContain("setDraft(String(value))")
+    expect(source).toContain("const normalized = Number.parseInt(draft.trim(), 10)")
+    expect(source).toContain("onBlur={commitDraft}")
+    expect(source).toContain("if (event.key === 'Enter') {")
+    expect(source).toContain("void updateSettings({ breakIntervalMinutes: next })")
+    expect(source).toContain("void updateSettings({ waterIntervalMinutes: next })")
+    expect(source).toContain("void updateSettings({ focusSessionMinutes: next })")
+    expect(styles).toContain('.stepper-input {')
+  })
+
   it('shows the water interval control only when hydration reminders are enabled', () => {
     const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
@@ -182,22 +198,31 @@ describe('settings-main actions', () => {
     expect(source).not.toContain('<select className="select" defaultValue="zh-CN">')
   })
 
-  it('temporarily hides update actions from the about panel', () => {
+  it('shows an inline update panel in the about section', () => {
     const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
-    expect(source).not.toContain('<div className="about-title">更新</div>')
-    expect(source).not.toContain('<div className="about-title">更新说明</div>')
-    expect(source).not.toContain('window.petBuddy.updates')
-    expect(source).not.toContain('{payload.updateState.message}')
-    expect(source).not.toContain('打开 Releases')
+    expect(source).toContain("<div className='about-title'>更新</div>")
+    expect(source).toContain('{payload.updateState.message}')
+    expect(source).toContain('window.petBuddy.updates.checkNow()')
+    expect(source).toContain('window.petBuddy.updates.download()')
+    expect(source).toContain('检查更新')
   })
 
-  it('temporarily hides the startup update toggle from the system panel', () => {
+  it('keeps the startup update toggle hidden from the system panel', () => {
     const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
 
     expect(source).not.toContain('<div className="field-label">启动时检查更新</div>')
     expect(source).not.toContain('payload.settings.checkUpdatesOnStartup')
     expect(source).not.toContain('updateSettings({ checkUpdatesOnStartup: checked })')
+  })
+
+  it('subscribes to pushed update state changes for download progress', () => {
+    const source = readNormalizedSource('src/renderer/src/settings-main.tsx')
+
+    expect(source).toContain('window.petBuddy.updates.onStateChanged')
+    expect(source).toContain('setPayload((current) =>')
+    expect(source).toContain('updateState: nextUpdateState')
+    expect(source).toContain('unsubscribeUpdateState()')
   })
 
   it('shows the onboarding notice only until the user dismisses it once', () => {
