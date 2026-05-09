@@ -637,21 +637,21 @@ const SettingsApp = () => {
                 </p>
               </div>
               <div className="notice-actions">
-                <button
+                {/* <button
                   className="secondary-button"
                   onClick={() =>
                     void window.petBuddy.permissions.openAccessibilitySettings()
                   }
                 >
                   打开权限设置
-                </button>
+                </button> */}
                 <button
                   className="primary-button"
                   onClick={() =>
                     void updateSettings({ onboardingCompleted: true })
                   }
                 >
-                  知道了
+                  GET!
                 </button>
               </div>
             </div>

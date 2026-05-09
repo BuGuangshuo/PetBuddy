@@ -1,6 +1,6 @@
 {
   "name": "petbuddy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A macOS desktop pet that keeps you on rhythm.",
   "main": "./out/main/index.js",
   "author": "OpenAI Codex",
