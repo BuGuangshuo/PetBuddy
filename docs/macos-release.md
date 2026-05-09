@@ -1,5 +1,41 @@
 # macOS Release
 
+## Stable release flow
+
+Use this flow every time. The goal is to avoid three common failures:
+
+- version and Git tag do not match
+- GitHub Release misses `latest-mac.yml`
+- update check is performed against the same version instead of an older installed build
+
+## 1. Prepare the version
+
+Before building, update [package.json](/Users/alanbu/PetBuddy/package.json) `version`.
+
+Rules:
+
+- app version and GitHub Release tag must match exactly
+- use `vX.Y.Z` as the Git tag format
+- if `package.json` is `0.1.0`, the Release tag must be `v0.1.0`
+
+Do not publish a tag like `v0.1` when the app version is `0.1.0`.
+
+## 2. Verify release prerequisites
+
+Before `pnpm package:release`, confirm all of these are ready:
+
+- valid `Developer ID Application` certificate is available in the local keychain
+- notarization credentials are set
+- you are building on macOS arm64
+- the working tree contains the exact code you want to ship
+
+Recommended verification:
+
+```bash
+pnpm typecheck
+pnpm test
+```
+
 ## Build outputs
 
 - Local Apple Silicon update bundle: `pnpm package`
@@ -10,6 +46,24 @@ Each build must produce these macOS auto-update assets:
 - `PetBuddy-<version>-arm64.dmg`
 - `PetBuddy-<version>-arm64-mac.zip`
 - `latest-mac.yml`
+
+After the build finishes, verify these files exist in `dist/`.
+
+## 3. Build the release bundle
+
+Use:
+
+```bash
+pnpm package:release
+```
+
+This should produce a signed and notarized macOS arm64 release bundle for:
+
+- manual install: `.dmg`
+- in-app update download: `.zip`
+- update metadata: `latest-mac.yml`
+
+Do not upload only the `.dmg`.
 
 ## Required signing prerequisite
 
@@ -50,3 +104,71 @@ For in-app updates to work, the GitHub Release for a given app version must cont
 - The app checks the GitHub Releases feed via `electron-updater`.
 - Version comparison is handled against the published release metadata.
 - Missing `latest-mac.yml` or missing `.zip` assets will break in-app download and install.
+
+## 4. Create the GitHub Release
+
+Create a GitHub Release whose tag exactly matches the app version.
+
+Example:
+
+- `package.json` version: `0.1.0`
+- Git tag: `v0.1.0`
+- GitHub Release: `v0.1.0`
+
+Upload all three generated files from `dist/`:
+
+- `PetBuddy-<version>-arm64.dmg`
+- `PetBuddy-<version>-arm64-mac.zip`
+- `latest-mac.yml`
+
+Before publishing, visually confirm the Release assets list contains all three files.
+
+## 5. Validate the in-app update path
+
+Do not validate against the same version you just built.
+
+Use this order:
+
+1. Install an older signed build, for example `v0.1.0`
+2. Publish a newer Release, for example `v0.1.1`
+3. Launch the installed old app
+4. Open settings and click `检查更新`
+5. Confirm the app finds `v0.1.1`
+6. Click `立即更新`
+7. Confirm download progress appears
+8. Confirm the app quits, installs, and relaunches into `v0.1.1`
+
+If you install `v0.1.1` and then check against `v0.1.1`, the expected result is `已经是最新版本`.
+
+## 6. Fast failure checks
+
+If update check fails, inspect these first:
+
+1. `latest-mac.yml` missing from the Release
+2. `.zip` missing from the Release
+3. Release tag does not exactly match app version
+4. app is not a packaged build
+5. you are testing on the newest installed version instead of an older one
+
+Typical symptom mapping:
+
+- `Cannot find latest-mac.yml`:
+  Release asset missing or tag mismatch
+- always `正在检查更新…` in development:
+  you are not testing a packaged build
+- `已经是最新版本` when you expect upgrade:
+  installed app version is already equal to the Release version
+
+## Release checklist
+
+Run this checklist in order:
+
+- [ ] `package.json` version is final
+- [ ] Git tag will be `vX.Y.Z` and exactly matches version
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm test` passes
+- [ ] `pnpm package:release` completes
+- [ ] `dist/` contains `.dmg`, `.zip`, and `latest-mac.yml`
+- [ ] GitHub Release contains all three files
+- [ ] validation is performed from an older installed build
+- [ ] in-app update downloads, installs, and relaunches successfully
