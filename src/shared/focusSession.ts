@@ -1,9 +1,24 @@
 import type { FocusMonitorState, FocusSample, FocusSession, FocusSessionStatus } from './types'
+import { domainMatchesList } from './distractingDomains'
 
 interface FocusOptions {
   distractingApps: string[]
+  distractingDomains?: string[]
   focusGraceSeconds: number
 }
+
+interface FocusSampleInput {
+  appId: FocusSample['appId']
+  domain?: FocusSample['domain']
+  timestamp: FocusSample['timestamp']
+}
+
+const BROWSER_APP_IDS = new Set([
+  'com.apple.Safari',
+  'com.google.Chrome',
+  'company.thebrowser.Browser',
+  'com.microsoft.edgemac'
+])
 
 export const createInitialFocusState = (): FocusMonitorState => ({
   currentDistractingApp: null,
@@ -47,10 +62,15 @@ export const getFocusSessionStatus = (session: FocusSession | null, now: number)
 
 export const stepFocusMonitor = (
   previous: FocusMonitorState,
-  sample: FocusSample,
+  sample: FocusSampleInput,
   options: FocusOptions
 ): FocusMonitorState => {
-  const isDistracting = sample.appId !== null && options.distractingApps.includes(sample.appId)
+  const isBrowserApp = sample.appId !== null && BROWSER_APP_IDS.has(sample.appId)
+  const isDistracting =
+    sample.appId !== null &&
+    (isBrowserApp
+      ? domainMatchesList(sample.domain ?? null, options.distractingDomains ?? [])
+      : options.distractingApps.includes(sample.appId))
 
   if (!isDistracting) {
     const focusStart = previous.currentDistractingApp
@@ -66,9 +86,7 @@ export const stepFocusMonitor = (
   }
 
   const distractingSince =
-    previous.currentDistractingApp === sample.appId && previous.distractingSince !== null
-      ? previous.distractingSince
-      : sample.timestamp
+    previous.currentDistractingApp !== null && previous.distractingSince !== null ? previous.distractingSince : sample.timestamp
 
   const distractedSeconds = Math.floor((sample.timestamp - distractingSince) / 1000)
 

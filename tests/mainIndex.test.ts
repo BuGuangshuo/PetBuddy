@@ -41,4 +41,25 @@ describe('main process activation behavior', () => {
 
     expect(source).not.toContain("if (store.isFirstLaunch()) { windows.showSettings(); }")
   })
+
+  it('stores a pending focus-mode enable request until accessibility permission is actually granted', () => {
+    const source = readNormalizedSource('src/main/index.ts')
+
+    expect(source).toContain('const permission = getAccessibilityStatus()')
+    expect(source).toContain("if (promptIfDenied && permission !== 'granted')")
+    expect(source).toContain('promptForAccessibilityIfNeeded()')
+    expect(source).toContain('focusModeEnabled: false')
+    expect(source).toContain('focusModePendingEnable: true')
+    expect(source).toContain('focusModePendingEnable: false')
+  })
+
+  it('uses the dedicated distracting app picker service instead of echoing the first saved app', () => {
+    const source = readNormalizedSource('src/main/index.ts')
+
+    expect(source).toContain("import { pickDistractingApp, resolveDistractingAppLabel, } from './services/distractingAppPicker'")
+    expect(source).toContain("pickDistractingApp: async () => pickDistractingApp((options) => dialog.showOpenDialog(options))")
+    expect(source).toContain('distractingAppLabels: Object.fromEntries(')
+    expect(source).toContain('resolveDistractingAppLabel(appId)')
+    expect(source).not.toContain('const [firstApp] = store.getSettings().distractingApps')
+  })
 })

@@ -13,6 +13,11 @@ import { ReminderService } from "./services/reminderService";
 import { PetBuddyStore } from "./services/store";
 import { UpdateService } from "./services/updateService";
 import { WindowManager } from "./services/windowManager";
+import { readDeviceInfo } from "./services/deviceInfo";
+import {
+  pickDistractingApp,
+  resolveDistractingAppLabel,
+} from "./services/distractingAppPicker";
 import {
   createFocusSession,
   getElapsedFocusSessionSeconds,
@@ -41,6 +46,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let appearances: RendererPetAppearance[] = [];
+type FocusPauseReason = "break" | "focusNudge";
 
 const main = async (): Promise<void> => {
   await app.whenReady();
@@ -60,6 +66,7 @@ const main = async (): Promise<void> => {
   }
 
   app.dock?.hide();
+  const deviceInfo = readDeviceInfo();
 
   const store = new PetBuddyStore();
   const updateService = new UpdateService(store.getAppVersion());
@@ -86,9 +93,12 @@ const main = async (): Promise<void> => {
 
   let activeFocusSession: import("@shared/types").FocusSession | null = null;
   let pausedFocusRemainingMs: number | null = null;
+  let pausedFocusReason: FocusPauseReason | null = null;
+  let pausedFocusReminderId: string | null = null;
   let focusSessionTimer: NodeJS.Timeout | null = null;
   let focusDoneUntil: number | null = null;
   let focusDoneTimer: NodeJS.Timeout | null = null;
+  const shownReminderIds = new Set<string>();
 
   const clearFocusTimers = (): void => {
     if (focusSessionTimer) {
@@ -172,6 +182,8 @@ const main = async (): Promise<void> => {
     }
     activeFocusSession = null;
     pausedFocusRemainingMs = null;
+    pausedFocusReason = null;
+    pausedFocusReminderId = null;
     focusSessionTimer = null;
     activateFocusDoneState(now);
     emitFocusSessionUpdate();
@@ -188,6 +200,8 @@ const main = async (): Promise<void> => {
     clearFocusTimers();
     focusDoneUntil = null;
     pausedFocusRemainingMs = null;
+    pausedFocusReason = null;
+    pausedFocusReminderId = null;
     const focusSessionMinutes = store.getSettings().focusSessionMinutes;
     activeFocusSession = createFocusSession(Date.now(), focusSessionMinutes);
     const durationMs = Math.max(0, activeFocusSession.endsAt - Date.now());
@@ -209,7 +223,10 @@ const main = async (): Promise<void> => {
     return buildSettingsPayload();
   };
 
-  const pauseFocusSessionForBreak = (): SettingsPayload => {
+  const pauseFocusSession = (
+    reason: FocusPauseReason,
+    reminderId?: string,
+  ): SettingsPayload => {
     const now = Date.now();
 
     if (!activeFocusSession) {
@@ -217,6 +234,8 @@ const main = async (): Promise<void> => {
     }
 
     pausedFocusRemainingMs = Math.max(0, activeFocusSession.endsAt - now);
+    pausedFocusReason = reason;
+    pausedFocusReminderId = reminderId ?? null;
     activeFocusSession = null;
     if (focusSessionTimer) {
       clearTimeout(focusSessionTimer);
@@ -226,8 +245,26 @@ const main = async (): Promise<void> => {
     return buildSettingsPayload();
   };
 
-  const resumeFocusSessionAfterBreak = (): SettingsPayload => {
-    if (pausedFocusRemainingMs === null) {
+  const pauseFocusSessionForBreak = (): SettingsPayload =>
+    pauseFocusSession("break");
+
+  const pauseFocusSessionForFocusNudge = (
+    reminderId: string,
+  ): SettingsPayload => pauseFocusSession("focusNudge", reminderId);
+
+  const resumePausedFocusSession = (
+    reason: FocusPauseReason,
+    reminderId?: string,
+  ): SettingsPayload => {
+    if (pausedFocusRemainingMs === null || pausedFocusReason !== reason) {
+      return buildSettingsPayload();
+    }
+
+    if (
+      reason === "focusNudge" &&
+      pausedFocusReminderId !== null &&
+      reminderId !== pausedFocusReminderId
+    ) {
       return buildSettingsPayload();
     }
 
@@ -238,6 +275,8 @@ const main = async (): Promise<void> => {
     };
     const durationMs = Math.max(0, activeFocusSession.endsAt - now);
     pausedFocusRemainingMs = null;
+    pausedFocusReason = null;
+    pausedFocusReminderId = null;
     focusSessionTimer = setTimeout(
       () => completeFocusSession({ showBubble: true }),
       durationMs,
@@ -246,14 +285,39 @@ const main = async (): Promise<void> => {
     return buildSettingsPayload();
   };
 
+  const resumeFocusSessionAfterBreak = (): SettingsPayload =>
+    resumePausedFocusSession("break");
+
+  const resumeFocusSessionAfterFocusNudge = (
+    reminderId: string,
+  ): SettingsPayload => resumePausedFocusSession("focusNudge", reminderId);
+
+  const clearFocusNudges = (): void => {
+    reminderService.clearByKind("focusNudge");
+
+    if (
+      pausedFocusReason === "focusNudge" &&
+      pausedFocusRemainingMs !== null
+    ) {
+      resumePausedFocusSession("focusNudge", pausedFocusReminderId ?? undefined);
+    }
+  };
+
   const buildSettingsPayload = (): SettingsPayload => ({
     settings: store.getSettings(),
+    distractingAppLabels: Object.fromEntries(
+      store
+        .getSettings()
+        .distractingApps.map((appId) => [appId, resolveDistractingAppLabel(appId)]),
+    ),
     focusSession: readFocusSessionState(),
     appearances,
     permissionState: getAccessibilityStatus(),
     updateState: updateService.getState(),
     version: store.getAppVersion(),
     isMacArm64,
+    deviceModelName: deviceInfo.modelName,
+    deviceChipName: deviceInfo.chipName,
   });
 
   updateService.onStateChanged((nextUpdateState) => {
@@ -298,7 +362,13 @@ const main = async (): Promise<void> => {
   const reminderService = new ReminderService({
     getSettings: () => store.getSettings(),
     onReminder: (event) => {
-      store.markReminderShown(event.kind);
+      if (!shownReminderIds.has(event.id)) {
+        shownReminderIds.add(event.id);
+        store.markReminderShown(event.kind);
+      }
+      if (event.kind === "focusNudge") {
+        pauseFocusSessionForFocusNudge(event.id);
+      }
       windows.ensurePetVisibleForReminder(event);
       emitPetEvent(windows.petWindow, { type: "reminder", event });
       void windows.playReminderMotion(event);
@@ -313,6 +383,7 @@ const main = async (): Promise<void> => {
 
   const focusMonitor = new FocusMonitorService({
     getSettings: () => store.getSettings(),
+    shouldMonitor: () => readFocusSessionState().status === "active",
     hasPermission: () => getAccessibilityStatus() === "granted",
     onDistractedDelta: (seconds) => {
       store.addDistractedSeconds(seconds);
@@ -353,17 +424,47 @@ const main = async (): Promise<void> => {
 
   const updateSettings = async (
     patch: Partial<AppSettings>,
+    options?: { promptIfDenied?: boolean },
   ): Promise<SettingsPayload> => {
     let nextPatch = patch;
+    const promptIfDenied = options?.promptIfDenied ?? true;
 
     if (patch.focusModeEnabled) {
-      const permission = promptForAccessibilityIfNeeded();
-      if (permission !== "granted") {
-        nextPatch = { ...patch, focusModeEnabled: false };
+      const permission = getAccessibilityStatus();
+      if (promptIfDenied && permission !== "granted") {
+        promptForAccessibilityIfNeeded();
+        nextPatch = {
+          ...patch,
+          focusModeEnabled: false,
+          focusModePendingEnable: true,
+        };
+      } else if (permission !== "granted") {
+        nextPatch = {
+          ...patch,
+          focusModeEnabled: false,
+          focusModePendingEnable: false,
+        };
+      } else {
+        nextPatch = {
+          ...patch,
+          focusModeEnabled: true,
+          focusModePendingEnable: false,
+        };
       }
     }
 
+    if (patch.focusModeEnabled === false) {
+      nextPatch = {
+        ...nextPatch,
+        focusModeEnabled: false,
+        focusModePendingEnable: false,
+      };
+    }
+
     const nextSettings = store.updateSettings(nextPatch);
+    if (patch.focusModeEnabled === false) {
+      clearFocusNudges();
+    }
     if (typeof patch.launchAtLogin === "boolean") {
       app.setLoginItemSettings({ openAtLogin: nextSettings.launchAtLogin });
     }
@@ -413,6 +514,9 @@ const main = async (): Promise<void> => {
         store.markReminderAcknowledged(kind);
       }
       reminderService.acknowledge(id);
+      if (kind === "focusNudge") {
+        resumeFocusSessionAfterFocusNudge(id);
+      }
     },
     snoozeBreakReminder: async (delayMs: number) => {
       reminderService.snoozeBreak(delayMs);
@@ -426,14 +530,17 @@ const main = async (): Promise<void> => {
     completeHydration: async (id: string) => {
       completeHydrationReminder(id);
     },
+    movePetPosition: async (position: PetPosition) => {
+      windows.movePet(position);
+    },
     setPetPosition: async (position: PetPosition) => {
       await updateSettings({ petPosition: position });
     },
     getPermissionState: getAccessibilityStatus,
     openAccessibilitySettings,
     openSettings: async () => windows.showSettings(),
-    toggleFocusMode: async (enabled: boolean) =>
-      updateSettings({ focusModeEnabled: enabled }),
+    toggleFocusMode: async (enabled: boolean, promptIfDenied = true) =>
+      updateSettings({ focusModeEnabled: enabled }, { promptIfDenied }),
     startFocusSession: async () => startFocusSession(),
     stopFocusSession: async () => stopFocusSession(),
     pauseFocusSessionForBreak: async () => pauseFocusSessionForBreak(),
@@ -453,8 +560,18 @@ const main = async (): Promise<void> => {
             return;
           }
 
-          if (readFocusSessionState().status === "paused") {
+          if (
+            readFocusSessionState().status === "paused" &&
+            pausedFocusReason === "break"
+          ) {
             resumeFocusSessionAfterBreak();
+            return;
+          }
+
+          if (
+            readFocusSessionState().status === "paused" &&
+            pausedFocusReason === "focusNudge"
+          ) {
             return;
           }
 
@@ -476,10 +593,8 @@ const main = async (): Promise<void> => {
     openReleasesPage: async () => updateService.openReleasesPage(),
     getTodayStats: () => store.getTodayStats(),
     getRecentStats: (days: number) => store.getRecentStats(days),
-    pickDistractingApp: async () => {
-      const [firstApp] = store.getSettings().distractingApps;
-      return firstApp ?? null;
-    },
+    pickDistractingApp: async () =>
+      pickDistractingApp((options) => dialog.showOpenDialog(options)),
   });
 
   if (store.getSettings().checkUpdatesOnStartup) {

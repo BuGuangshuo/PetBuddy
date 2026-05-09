@@ -5,9 +5,12 @@ import {
   BellOutlined,
   FieldTimeOutlined,
   CheckCircleOutlined,
+  PlusOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import type { RendererPetAppearance, SettingsPayload } from "@shared/api";
 import type { AppSettings, DailyStats, UpdateState } from "@shared/types";
+import { normalizeDistractingDomains } from "@shared/distractingDomains";
 import { getElapsedFocusSessionSeconds } from "@shared/focusSession";
 import "./styles.css";
 import {
@@ -18,6 +21,69 @@ import { isReminderEnabled, nextReminderInterval } from "./settingsHelpers";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+const normalizeDistractingAppValue = (value: string) =>
+  value.trim().replace(/\s+/g, " ");
+
+const SUPPORTED_BROWSER_APP_KEYS = new Set([
+  "com.apple.safari",
+  "safari",
+  "com.google.chrome",
+  "google chrome",
+  "company.thebrowser.browser",
+  "arc",
+  "com.microsoft.edgemac",
+  "microsoft edge",
+]);
+
+const mergeDistractingApps = (values: string[], additions: string[]) => {
+  const next: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of [...values, ...additions]) {
+    const normalized = normalizeDistractingAppValue(value);
+    if (!normalized) {
+      continue;
+    }
+
+    const normalizedKey = normalized.toLocaleLowerCase();
+    if (SUPPORTED_BROWSER_APP_KEYS.has(normalizedKey)) {
+      continue;
+    }
+
+    if (seen.has(normalizedKey)) {
+      continue;
+    }
+
+    seen.add(normalizedKey);
+    next.push(normalized);
+  }
+
+  return next;
+};
+
+const mergeDistractingDomains = (values: string[], additions: string[]) =>
+  normalizeDistractingDomains([...values, ...additions]);
+
+const getDeviceInfoText = (payload: SettingsPayload): string => {
+  const platformLabel = payload.isMacArm64
+    ? "macOS"
+    : "当前平台不在正式支持范围内";
+
+  if (payload.deviceModelName && payload.deviceChipName) {
+    return `${payload.deviceModelName}（${payload.deviceChipName}）  ${platformLabel}`;
+  }
+
+  if (payload.deviceModelName) {
+    return `${payload.deviceModelName} · ${platformLabel}`;
+  }
+
+  if (payload.deviceChipName) {
+    return `${payload.deviceChipName} · ${platformLabel}`;
+  }
+
+  return platformLabel;
+};
 
 const Toggle = ({
   checked,
@@ -89,7 +155,9 @@ const Stepper = ({
         }}
       />
       <span className="stepper-unit">{unit}</span>
-      <button onClick={() => onChange(clamp(value + step, min, max))}>＋</button>
+      <button onClick={() => onChange(clamp(value + step, min, max))}>
+        ＋
+      </button>
     </div>
   );
 };
@@ -98,44 +166,82 @@ const ChipEditor = ({
   values,
   onChange,
   placeholder,
+  onPick,
+  getLabel,
+  allowCustomInput = true,
+  mergeValues = mergeDistractingApps,
 }: {
   values: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
+  onPick?: () => Promise<void>;
+  getLabel?: (value: string) => string;
+  allowCustomInput?: boolean;
+  mergeValues?: (values: string[], additions: string[]) => string[];
 }) => {
   const [draft, setDraft] = useState("");
 
+  const commitDraft = () => {
+    const next = mergeValues([], [draft]);
+    if (!next.length) {
+      return;
+    }
+
+    const merged = mergeValues(values, next);
+    if (merged.length === values.length) {
+      setDraft("");
+      return;
+    }
+
+    onChange(merged);
+    setDraft("");
+  };
+
   return (
     <div className="chip-box">
-      <div className="chips">
-        {values.map((value) => (
-          <span className="chip" key={value}>
-            {value}
-            <button
-              onClick={() => onChange(values.filter((item) => item !== value))}
-            >
-              ×
-            </button>
-          </span>
-        ))}
+      {values.length > 0 && (
+        <div className="chips">
+          {values.map((value) => (
+            <span className="chip" key={value}>
+              {getLabel ? getLabel(value) : value}
+              <button
+                onClick={() =>
+                  onChange(values.filter((item) => item !== value))
+                }
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="chip-toolbar">
+        {onPick ? (
+          <button className="dashed-button" onClick={() => void onPick()}>
+            <PlusOutlined />
+            选择应用
+          </button>
+        ) : null}
+
+        {allowCustomInput ? (
+          <div className="chip-input-container">
+            <LinkOutlined className="chip-input-icon" />
+            <input
+              className="chip-input"
+              value={draft}
+              placeholder={placeholder}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitDraft();
+                }
+              }}
+            />
+          </div>
+        ) : null}
       </div>
-      <input
-        className="chip-input"
-        value={draft}
-        placeholder={placeholder}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            const next = draft.trim();
-            if (!next || values.includes(next)) {
-              return;
-            }
-            onChange([...values, next]);
-            setDraft("");
-          }
-        }}
-      />
     </div>
   );
 };
@@ -240,9 +346,22 @@ const SettingsApp = () => {
     try {
       const permissionState =
         await window.petBuddy.permissions.getAccessibilityStatus();
-      setPayload((current) =>
-        current ? { ...current, permissionState } : current,
-      );
+      let shouldEnablePendingFocusMode = false;
+      setPayload((current) => {
+        shouldEnablePendingFocusMode = Boolean(
+          current?.settings.focusModePendingEnable &&
+          permissionState === "granted",
+        );
+        return current ? { ...current, permissionState } : current;
+      });
+
+      if (shouldEnablePendingFocusMode) {
+        await runPayloadAction(
+          window.petBuddy.app.toggleFocusMode(true, false),
+        );
+        return;
+      }
+
       setError(null);
     } catch (loadError) {
       setError(
@@ -359,6 +478,26 @@ const SettingsApp = () => {
     }
   };
 
+  const pickDistractingApp = async () => {
+    try {
+      const picked = await window.petBuddy.apps.pickDistractingApp();
+      const next = mergeDistractingApps(
+        payload?.settings.distractingApps ?? [],
+        picked ? [picked.id] : [],
+      );
+      if (
+        !next.length ||
+        next.length === payload?.settings.distractingApps.length
+      ) {
+        return;
+      }
+
+      await updateSettings({ distractingApps: next });
+    } catch (actionError) {
+      handleActionError(actionError);
+    }
+  };
+
   const selectedAppearance = useMemo(
     () =>
       payload?.appearances.find(
@@ -421,6 +560,8 @@ const SettingsApp = () => {
     payload.settings.waterIntervalMinutes,
   );
   const isFocusModeEnabled = payload.settings.focusModeEnabled;
+  const canConfigureFocusDetection =
+    isFocusModeEnabled && payload.permissionState === "granted";
   const activeFocusSeconds =
     payload.focusSession.status === "active"
       ? getElapsedFocusSessionSeconds(payload.focusSession.session, now)
@@ -772,8 +913,7 @@ const SettingsApp = () => {
                 <div>
                   <div className="field-label">开启分心检测</div>
                   <div className="field-hint">
-                    检测当前前台
-                    App；命中预设分心应用时，会在宽限时间后提醒你回到工作。
+                    在专注模式下浏览特定应用或网址的时候，宠物会出现分心提醒。
                   </div>
                 </div>
                 <div className="field-control">
@@ -781,16 +921,22 @@ const SettingsApp = () => {
                     checked={isFocusModeEnabled}
                     onChange={(checked) =>
                       void runPayloadAction(
-                        window.petBuddy.app.toggleFocusMode(checked),
+                        window.petBuddy.app.toggleFocusMode(
+                          checked,
+                          payload.permissionState !== "granted",
+                        ),
                       )
                     }
                   />
                 </div>
               </div>
-              {isFocusModeEnabled ? (
+              {canConfigureFocusDetection ? (
                 <>
                   <div className="field-row">
                     <div className="field-label">检测宽限时间</div>
+                    <div className="field-hint" style={{ marginTop: "-8px" }}>
+                      允许分心的宽限时间
+                    </div>
                     <div className="field-control">
                       <Stepper
                         value={payload.settings.focusGraceSeconds}
@@ -808,7 +954,7 @@ const SettingsApp = () => {
                     <div>
                       <div className="field-label">分心应用</div>
                       <div className="field-hint">
-                        输入 App 名或 bundle id，按 Enter 添加。
+                        仅用于非浏览器 App；浏览器请添加到下面的分心域名。
                       </div>
                     </div>
                     <div className="field-control">
@@ -817,7 +963,31 @@ const SettingsApp = () => {
                         onChange={(next) =>
                           void updateSettings({ distractingApps: next })
                         }
-                        placeholder="例如 com.apple.Safari 或 Google Chrome"
+                        onPick={pickDistractingApp}
+                        getLabel={(value) =>
+                          payload.distractingAppLabels[value] ?? value
+                        }
+                        allowCustomInput={false}
+                        placeholder="例如 com.spotify.client 或 Slack"
+                      />
+                    </div>
+                  </div>
+                  <div className="field-row">
+                    <div>
+                      <div className="field-label">分心域名</div>
+                      <div className="field-hint">
+                        输入域名或完整链接，按 Enter
+                        添加；仅对当前最前面的浏览器标签页生效。
+                      </div>
+                    </div>
+                    <div className="field-control">
+                      <ChipEditor
+                        values={payload.settings.distractingDomains}
+                        onChange={(next) =>
+                          void updateSettings({ distractingDomains: next })
+                        }
+                        mergeValues={mergeDistractingDomains}
+                        placeholder="例如 youtube.com 或 https://x.com/home"
                       />
                     </div>
                   </div>
@@ -861,19 +1031,18 @@ const SettingsApp = () => {
                 </div>
                 <div className="about-row">
                   <div>
-                    <div className="about-title">诊断信息</div>
+                    <div className="about-title">设备信息</div>
                     <div className="about-text">
-                      {payload.isMacArm64
-                        ? "Apple Silicon macOS"
-                        : "当前平台不在正式支持范围内"}
+                      {getDeviceInfoText(payload)}
                     </div>
                   </div>
-                  <strong>{payload.isMacArm64 ? "已支持" : "未支持"}</strong>
                 </div>
                 <div className="about-row about-row-update">
                   <div>
                     <div className="about-title">更新</div>
-                    <div className="about-text">{payload.updateState.message}</div>
+                    <div className="about-text">
+                      {payload.updateState.message}
+                    </div>
                     {showUpdateProgress ? (
                       <div className="update-progress" aria-label="下载进度">
                         <div

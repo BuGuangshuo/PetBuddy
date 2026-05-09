@@ -30,6 +30,8 @@ const api: PetBuddyApi = {
     completeBreak: () => ipcRenderer.invoke(IPC_CHANNELS.petCompleteBreak),
     completeHydration: (reminderId) =>
       ipcRenderer.invoke(IPC_CHANNELS.petCompleteHydration, reminderId),
+    movePosition: (position) =>
+      ipcRenderer.invoke(IPC_CHANNELS.petMovePosition, position),
     setPosition: (position) =>
       ipcRenderer.invoke(IPC_CHANNELS.petSetPosition, position),
   },
@@ -41,8 +43,12 @@ const api: PetBuddyApi = {
   },
   app: {
     openSettings: () => ipcRenderer.invoke(IPC_CHANNELS.appOpenSettings),
-    toggleFocusMode: (enabled) =>
-      ipcRenderer.invoke(IPC_CHANNELS.appToggleFocusMode, enabled),
+    toggleFocusMode: (enabled, promptIfDenied = true) =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.appToggleFocusMode,
+        enabled,
+        promptIfDenied,
+      ),
     startFocusSession: () =>
       ipcRenderer.invoke(IPC_CHANNELS.appStartFocusSession),
     stopFocusSession: () =>

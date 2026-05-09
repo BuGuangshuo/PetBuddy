@@ -184,7 +184,7 @@ export class WindowManager {
       return
     }
 
-    if (event.kind !== 'break' && event.kind !== 'water') {
+    if (event.kind !== 'break' && event.kind !== 'water' && event.kind !== 'focusNudge') {
       return
     }
 

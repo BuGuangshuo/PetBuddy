@@ -27,6 +27,8 @@ const priorityByKind: Record<ReminderKind, number> = {
   focusNudge: FOCUS_PRIORITY
 }
 
+const shouldPersistUntilAcknowledged = (kind: ReminderKind): boolean => kind === 'focusNudge'
+
 export class ReminderService {
   private readonly queue = createReminderQueue()
   private scheduler
@@ -70,12 +72,23 @@ export class ReminderService {
   }
 
   enqueue(kind: ReminderKind): void {
-    this.queue.enqueue(this.createReminderEvent(kind))
+    const event = this.createReminderEvent(kind)
+
+    if (
+      this.activeEvent?.kind === 'focusNudge' &&
+      event.priority > this.activeEvent.priority
+    ) {
+      this.clearActiveFinishTimer()
+      this.activeEvent = null
+    }
+
+    this.queue.enqueue(event)
+    this.flush()
   }
 
   acknowledge(reminderId: string): void {
-    if (this.activeEvent?.id === reminderId && this.finishTimer) {
-      clearTimeout(this.finishTimer)
+    if (this.activeEvent?.id === reminderId) {
+      this.clearActiveFinishTimer()
       this.finishCurrent()
     }
   }
@@ -86,6 +99,15 @@ export class ReminderService {
 
   completeBreak(): void {
     this.scheduler.completeBreak(Date.now())
+  }
+
+  clearByKind(kind: ReminderKind): void {
+    if (this.activeEvent?.kind === kind) {
+      this.clearActiveFinishTimer()
+      this.finishCurrent()
+    }
+
+    this.queue.removeWhere((event) => event.kind === kind)
   }
 
   private flush(): void {
@@ -100,7 +122,10 @@ export class ReminderService {
 
     this.activeEvent = event
     this.options.onReminder(event)
-    this.finishTimer = setTimeout(() => this.finishCurrent(), event.durationMs)
+
+    if (!shouldPersistUntilAcknowledged(event.kind)) {
+      this.finishTimer = setTimeout(() => this.finishCurrent(), event.durationMs)
+    }
   }
 
   private finishCurrent(): void {
@@ -112,6 +137,13 @@ export class ReminderService {
     this.activeEvent = null
     this.options.onReminderFinished(finished)
     this.flush()
+  }
+
+  private clearActiveFinishTimer(): void {
+    if (this.finishTimer) {
+      clearTimeout(this.finishTimer)
+      this.finishTimer = null
+    }
   }
 
   private createReminderEvent(kind: ReminderKind): ReminderEvent {

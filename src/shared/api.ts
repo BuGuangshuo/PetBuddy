@@ -28,12 +28,15 @@ export interface RendererPetAppearance extends Omit<PetAppearance, "assets"> {
 
 export interface SettingsPayload {
   settings: AppSettings;
+  distractingAppLabels: Record<string, string>;
   focusSession: FocusSessionState;
   appearances: RendererPetAppearance[];
   permissionState: PermissionState;
   updateState: UpdateState;
   version: string;
   isMacArm64: boolean;
+  deviceModelName: string | null;
+  deviceChipName: string | null;
 }
 
 export type PetEvent =
@@ -69,6 +72,7 @@ export interface PetBuddyApi {
     muteBreakForToday(): Promise<void>;
     completeBreak(): Promise<void>;
     completeHydration(reminderId: string): Promise<void>;
+    movePosition(position: PetPosition): Promise<void>;
     setPosition(position: PetPosition): Promise<void>;
   };
   permissions: {
@@ -77,7 +81,10 @@ export interface PetBuddyApi {
   };
   app: {
     openSettings(): Promise<void>;
-    toggleFocusMode(enabled: boolean): Promise<SettingsPayload>;
+    toggleFocusMode(
+      enabled: boolean,
+      promptIfDenied?: boolean,
+    ): Promise<SettingsPayload>;
     startFocusSession(): Promise<SettingsPayload>;
     stopFocusSession(): Promise<SettingsPayload>;
     pauseFocusSessionForBreak(): Promise<SettingsPayload>;
@@ -98,7 +105,7 @@ export interface PetBuddyApi {
     getRecent(days: number): Promise<DailyStats[]>;
   };
   apps: {
-    pickDistractingApp(): Promise<string | null>;
+    pickDistractingApp(): Promise<{ id: string; label: string } | null>;
   };
 }
 
@@ -112,6 +119,7 @@ export const IPC_CHANNELS = {
   petMuteBreakForToday: "pet:mute-break-for-today",
   petCompleteBreak: "pet:complete-break",
   petCompleteHydration: "pet:complete-hydration",
+  petMovePosition: "pet:move-position",
   petSetPosition: "pet:set-position",
   petEvent: "pet:event",
   permissionsGet: "permissions:get",

@@ -10,6 +10,7 @@ import type {
   PetSceneKey,
   UpdateState,
 } from "@shared/types";
+import type { DistractingAppSelection } from "../services/distractingAppPicker";
 
 interface RegisterIpcOptions {
   getSettingsPayload: () => Promise<SettingsPayload> | SettingsPayload;
@@ -29,12 +30,14 @@ interface RegisterIpcOptions {
   muteBreakReminderForToday: () => Promise<void> | void;
   completeBreakReminder: () => Promise<void> | void;
   completeHydration: (id: string) => Promise<void> | void;
+  movePetPosition: (position: PetPosition) => Promise<void> | void;
   setPetPosition: (position: PetPosition) => Promise<void> | void;
   getPermissionState: () => Promise<PermissionState> | PermissionState;
   openAccessibilitySettings: () => Promise<void> | void;
   openSettings: () => Promise<void> | void;
   toggleFocusMode: (
     enabled: boolean,
+    promptIfDenied?: boolean,
   ) => Promise<SettingsPayload> | SettingsPayload;
   startFocusSession: () => Promise<SettingsPayload> | SettingsPayload;
   stopFocusSession: () => Promise<SettingsPayload> | SettingsPayload;
@@ -51,7 +54,7 @@ interface RegisterIpcOptions {
   openReleasesPage: () => Promise<void> | void;
   getTodayStats: () => Promise<DailyStats> | DailyStats;
   getRecentStats: (days: number) => Promise<DailyStats[]> | DailyStats[];
-  pickDistractingApp: () => Promise<string | null>;
+  pickDistractingApp: () => Promise<DistractingAppSelection | null>;
 }
 
 export const registerIpc = (options: RegisterIpcOptions): void => {
@@ -86,6 +89,10 @@ export const registerIpc = (options: RegisterIpcOptions): void => {
     IPC_CHANNELS.petCompleteHydration,
     (_event, reminderId: string) => options.completeHydration(reminderId),
   );
+  ipcMain.handle(
+    IPC_CHANNELS.petMovePosition,
+    (_event, position: PetPosition) => options.movePetPosition(position),
+  );
   ipcMain.handle(IPC_CHANNELS.petSetPosition, (_event, position: PetPosition) =>
     options.setPetPosition(position),
   );
@@ -96,8 +103,10 @@ export const registerIpc = (options: RegisterIpcOptions): void => {
     options.openAccessibilitySettings(),
   );
   ipcMain.handle(IPC_CHANNELS.appOpenSettings, () => options.openSettings());
-  ipcMain.handle(IPC_CHANNELS.appToggleFocusMode, (_event, enabled: boolean) =>
-    options.toggleFocusMode(enabled),
+  ipcMain.handle(
+    IPC_CHANNELS.appToggleFocusMode,
+    (_event, enabled: boolean, promptIfDenied?: boolean) =>
+      options.toggleFocusMode(enabled, promptIfDenied),
   );
   ipcMain.handle(IPC_CHANNELS.appStartFocusSession, () =>
     options.startFocusSession(),

@@ -36,11 +36,24 @@ describe('manual focus completion flow', () => {
     const source = readNormalizedSource('src/main/index.ts')
 
     expect(source).toContain('let pausedFocusRemainingMs: number | null = null')
-    expect(source).toContain('const pauseFocusSessionForBreak = (): SettingsPayload => {')
+    expect(source).toContain('const pauseFocusSession = ( reason: FocusPauseReason, reminderId?: string, ): SettingsPayload => {')
     expect(source).toContain('pausedFocusRemainingMs = Math.max(0, activeFocusSession.endsAt - now)')
-    expect(source).toContain('const resumeFocusSessionAfterBreak = (): SettingsPayload => {')
+    expect(source).toContain("const pauseFocusSessionForBreak = (): SettingsPayload => pauseFocusSession('break')")
+    expect(source).toContain("const resumeFocusSessionAfterBreak = (): SettingsPayload => resumePausedFocusSession('break')")
     expect(source).toContain('activeFocusSession = {')
     expect(source).toContain('endsAt: now + pausedFocusRemainingMs')
     expect(source).toContain("? 'paused' :")
+  })
+
+  it('pauses focus sessions for distraction nudges and resumes them only after acknowledging that nudge', () => {
+    const source = readNormalizedSource('src/main/index.ts')
+
+    expect(source).toContain("type FocusPauseReason = 'break' | 'focusNudge'")
+    expect(source).toContain('let pausedFocusReason: FocusPauseReason | null = null')
+    expect(source).toContain('let pausedFocusReminderId: string | null = null')
+    expect(source).toContain("if (event.kind === 'focusNudge') {")
+    expect(source).toContain('pauseFocusSessionForFocusNudge(event.id)')
+    expect(source).toContain("if (kind === 'focusNudge') {")
+    expect(source).toContain('resumeFocusSessionAfterFocusNudge(id)')
   })
 })

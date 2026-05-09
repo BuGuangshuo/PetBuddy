@@ -1,4 +1,5 @@
 import { cloneDefaultCustomSceneGifs, createDefaultStore, defaultSettings } from './defaults'
+import { normalizeDistractingDomains } from './distractingDomains'
 import type {
   AppSettings,
   CustomSceneGifMap,
@@ -36,9 +37,22 @@ const isNonNegativeInteger = (value: unknown): value is number =>
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean'
 
 const PET_APPEARANCE_IDS: readonly PetAppearanceId[] = ['line-dog', 'golden-puppy']
+const SUPPORTED_BROWSER_APP_KEYS = new Set([
+  'com.apple.safari',
+  'safari',
+  'com.google.chrome',
+  'google chrome',
+  'company.thebrowser.browser',
+  'arc',
+  'com.microsoft.edgemac',
+  'microsoft edge'
+])
 
 const isPetAppearanceId = (value: unknown): value is PetAppearanceId =>
   typeof value === 'string' && PET_APPEARANCE_IDS.includes(value as PetAppearanceId)
+
+const isSupportedBrowserApp = (value: string): boolean =>
+  SUPPORTED_BROWSER_APP_KEYS.has(value.trim().toLocaleLowerCase())
 
 const sanitizeSceneGifAppearanceMap = (value: unknown): Partial<Record<PetSceneKey, string>> => {
   if (!isRecord(value)) {
@@ -93,6 +107,7 @@ const mergeSettings = (value: unknown): AppSettings => {
     return {
       ...defaultSettings,
       distractingApps: [...defaultSettings.distractingApps],
+      distractingDomains: [...defaultSettings.distractingDomains],
       petPosition: { ...defaultSettings.petPosition },
       customSceneGifs: mergeCustomSceneGifs(undefined)
     }
@@ -119,6 +134,9 @@ const mergeSettings = (value: unknown): AppSettings => {
     focusModeEnabled: isBoolean(persisted.focusModeEnabled)
       ? persisted.focusModeEnabled
       : defaultSettings.focusModeEnabled,
+    focusModePendingEnable: isBoolean(persisted.focusModePendingEnable)
+      ? persisted.focusModePendingEnable
+      : defaultSettings.focusModePendingEnable,
     focusGraceSeconds: isNonNegativeInteger(persisted.focusGraceSeconds)
       ? persisted.focusGraceSeconds
       : defaultSettings.focusGraceSeconds,
@@ -130,8 +148,15 @@ const mergeSettings = (value: unknown): AppSettings => {
       ? persisted.selectedPetAppearance
       : defaultSettings.selectedPetAppearance,
     distractingApps: Array.isArray(persisted.distractingApps)
-      ? persisted.distractingApps.filter((app): app is string => typeof app === 'string')
+      ? persisted.distractingApps.filter(
+          (app): app is string => typeof app === 'string' && !isSupportedBrowserApp(app)
+        )
       : [...defaultSettings.distractingApps],
+    distractingDomains: Array.isArray(persisted.distractingDomains)
+      ? normalizeDistractingDomains(
+          persisted.distractingDomains.filter((domain): domain is string => typeof domain === 'string')
+        )
+      : [...defaultSettings.distractingDomains],
     onboardingCompleted: isBoolean(persisted.onboardingCompleted)
       ? persisted.onboardingCompleted
       : defaultSettings.onboardingCompleted,

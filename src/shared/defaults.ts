@@ -12,18 +12,7 @@ export const BREAK_PRIORITY = 3;
 export const FOCUS_PRIORITY = 2;
 export const WATER_PRIORITY = 1;
 
-export const DEFAULT_DISTRACTING_APPS = [
-  "org.mozilla.firefox",
-  "com.operasoftware.Opera",
-  "company.thebrowser.Browser",
-  "com.tinyspeck.slackmacgap",
-  "com.hnc.Discord",
-  "com.tencent.xinWeChat",
-  "com.apple.MobileSMS",
-  "X",
-  "Twitter",
-  "Safari",
-];
+export const DEFAULT_DISTRACTING_APPS = [];
 
 const DEFAULT_CUSTOM_SCENE_GIFS_SOURCE = Object.freeze({
   "line-dog": {},
@@ -41,12 +30,14 @@ export const defaultSettings: AppSettings = {
   waterIntervalMinutes: 30,
   focusSessionMinutes: 25,
   focusModeEnabled: false,
+  focusModePendingEnable: false,
   focusGraceSeconds: 20,
   launchAtLogin: false,
   checkUpdatesOnStartup: false,
   selectedPetAppearance: "line-dog",
   petPosition: { x: 48, y: 48 },
   distractingApps: [...DEFAULT_DISTRACTING_APPS],
+  distractingDomains: [],
   onboardingCompleted: false,
   customSceneGifs: cloneDefaultCustomSceneGifs(),
 };
@@ -73,6 +64,7 @@ export const createDefaultStore = (): StoreShape => ({
   settings: {
     ...defaultSettings,
     distractingApps: [...defaultSettings.distractingApps],
+    distractingDomains: [...defaultSettings.distractingDomains],
     petPosition: { ...defaultSettings.petPosition },
     customSceneGifs: cloneDefaultCustomSceneGifs(),
   },

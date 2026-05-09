@@ -75,18 +75,28 @@ describe('pet-main interactions', () => {
   it('renders dedicated hydration reminder actions instead of a single acknowledge button', () => {
     const source = readNormalizedSource('src/renderer/src/pet-main.tsx')
 
-    expect(source).toContain('pendingHydrationEvent ?? activeEvent')
+    expect(source).toContain('pendingHydrationEvent ?? (breakReminder ? null : focusNudgeReminder)')
     expect(source).toContain("displayedReminder?.kind === 'water'")
     expect(source).toContain('没空')
     expect(source).toContain('我喝啦')
-    expect(source).toContain('知道了')
+  })
+
+  it('keeps distraction nudges in a dedicated pending state and renders a confirmation dialog that resumes focus only after acknowledgement', () => {
+    const source = readNormalizedSource('src/renderer/src/pet-main.tsx')
+
+    expect(source).toContain('const [pendingFocusNudgeEvent, setPendingFocusNudgeEvent] = useState<ReminderEvent | null>(null)')
+    expect(source).toContain("if (event.event.kind === 'focusNudge') {")
+    expect(source).toContain('setPendingFocusNudgeEvent(event.event)')
+    expect(source).toContain('const focusNudgeReminder =')
+    expect(source).toContain("className='pet-dialog pet-dialog-focus'")
+    expect(source).toContain('我知道啦')
   })
 
   it('renders dedicated break reminder actions and follow-up break states', () => {
     const source = readNormalizedSource('src/renderer/src/pet-main.tsx')
 
-    expect(source).toContain("displayedReminder?.kind === 'break'")
-    expect(source).toContain("activeEvent?.kind !== 'break' && activeEvent")
+    expect(source).toContain("const activeBreakReminder = activeEvent?.kind === 'break' ? activeEvent : null")
+    expect(source).toContain('pendingBreakEvent ?? activeBreakReminder ?? deferredBreakReminder')
     expect(source).toContain("className='pet-dialog pet-dialog-break'")
     expect(source).toContain("className='pet-dialog-actions'")
     expect(source).toContain("className='pet-card-anchor'")
@@ -274,6 +284,17 @@ describe('pet-main interactions', () => {
     expect(source).toContain('HAPPY_INTERACTION_DURATION_MS')
     expect(source).toContain('onClick={handlePetClick}')
     expect(source).toContain('src={renderedAsset}')
+  })
+
+  it('moves the pet window live during dragging and persists the final position only on mouseup', () => {
+    const source = readNormalizedSource('src/renderer/src/pet-main.tsx')
+
+    expect(source).toContain('window.petBuddy.pet.movePosition(roundedPosition)')
+    expect(source).toContain('const handleMouseUp = () => {')
+    expect(source).toContain('if (!dragging) { return; }')
+    expect(source).toContain('setDragging(false)')
+    expect(source).toContain('const nextPosition = petPositionRef.current')
+    expect(source).toContain('persistPetPosition(nextPosition)')
   })
 
 })

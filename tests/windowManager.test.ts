@@ -410,7 +410,7 @@ describe('WindowManager', () => {
     expect(petWindowShowInactive).toHaveBeenCalledTimes(1)
   })
 
-  it('reveals the hidden pet window for water reminders only', async () => {
+  it('reveals the hidden pet window for focus and water reminders', async () => {
     const { WindowManager } = await import('../src/main/services/windowManager')
     const manager = new WindowManager('/tmp/preload.js')
 
@@ -427,7 +427,7 @@ describe('WindowManager', () => {
       timestamp: Date.now()
     })
 
-    expect(petWindowShowInactive).not.toHaveBeenCalled()
+    expect(petWindowShowInactive).toHaveBeenCalledTimes(1)
 
     manager.ensurePetVisibleForReminder({
       id: 'water-1',
@@ -439,7 +439,7 @@ describe('WindowManager', () => {
       timestamp: Date.now()
     })
 
-    expect(petWindowShowInactive).toHaveBeenCalledTimes(1)
+    expect(petWindowShowInactive).toHaveBeenCalledTimes(2)
   })
 
   it('does not reveal settings on activate while the pet is visible', async () => {

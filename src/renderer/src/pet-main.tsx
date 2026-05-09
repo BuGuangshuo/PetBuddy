@@ -94,6 +94,8 @@ const PetApp = () => {
     useState<ReminderEvent | null>(null);
   const [pendingHydrationEvent, setPendingHydrationEvent] =
     useState<ReminderEvent | null>(null);
+  const [pendingFocusNudgeEvent, setPendingFocusNudgeEvent] =
+    useState<ReminderEvent | null>(null);
   const [focusStartMessage, setFocusStartMessage] = useState<string | null>(
     null,
   );
@@ -201,6 +203,9 @@ const PetApp = () => {
     setActiveEvent((current) => (current?.id === reminderId ? null : current));
     clearPendingBreakEvent(reminderId);
     clearPendingHydrationEvent(reminderId);
+    setPendingFocusNudgeEvent((current) =>
+      current?.id === reminderId ? null : current,
+    );
   };
 
   const dismissHydrationReminderForFocusTransition = () => {
@@ -263,11 +268,17 @@ const PetApp = () => {
         if (event.event.kind === "water") {
           setPendingHydrationEvent(event.event);
         }
+        if (event.event.kind === "focusNudge") {
+          setPendingFocusNudgeEvent(event.event);
+        }
         setActiveEvent(event.event);
       }
 
       if (event.type === "reminder-finished") {
         setActiveEvent((current) =>
+          current?.id === event.eventId ? null : current,
+        );
+        setPendingFocusNudgeEvent((current) =>
           current?.id === event.eventId ? null : current,
         );
       }
@@ -361,11 +372,15 @@ const PetApp = () => {
     return () => window.clearTimeout(timer);
   }, [focusCompletionMessage]);
 
-  const displayedReminder = pendingHydrationEvent ?? activeEvent;
-  const displayedBreakReminder =
-    displayedReminder?.kind === "break" ? displayedReminder : null;
+  const activeBreakReminder =
+    activeEvent?.kind === "break" ? activeEvent : null;
   const breakReminder =
-    pendingBreakEvent ?? displayedBreakReminder ?? deferredBreakReminder;
+    pendingBreakEvent ?? activeBreakReminder ?? deferredBreakReminder;
+  const focusNudgeReminder =
+    pendingFocusNudgeEvent ??
+    (activeEvent?.kind === "focusNudge" ? activeEvent : null);
+  const displayedReminder =
+    pendingHydrationEvent ?? (breakReminder ? null : focusNudgeReminder);
 
   useEffect(() => {
     if (!breakReminder) {
@@ -380,7 +395,8 @@ const PetApp = () => {
   }, [breakReminder]);
 
   useEffect(() => {
-    const displayedReminder = pendingHydrationEvent ?? activeEvent;
+    const displayedReminder =
+      pendingHydrationEvent ?? (breakReminder ? null : pendingFocusNudgeEvent);
 
     if (displayedReminder?.kind !== "water") {
       return;
@@ -391,7 +407,7 @@ const PetApp = () => {
       HYDRATION_PROMPT_TIMEOUT_MS,
     );
     return () => window.clearTimeout(timer);
-  }, [activeEvent, pendingHydrationEvent]);
+  }, [breakReminder, pendingFocusNudgeEvent, pendingHydrationEvent]);
   useEffect(() => {
     displayedReminderRef.current = displayedReminder;
   }, [displayedReminder]);
@@ -487,7 +503,17 @@ const PetApp = () => {
     }
   }, [settings?.petPosition.x, settings?.petPosition.y]);
 
-  const updatePetPosition = (nextPosition: PetPosition) => {
+  const movePetPosition = (nextPosition: PetPosition) => {
+    const roundedPosition = {
+      x: Math.round(nextPosition.x),
+      y: Math.round(nextPosition.y),
+    };
+
+    petPositionRef.current = roundedPosition;
+    void window.petBuddy.pet.movePosition(roundedPosition);
+  };
+
+  const persistPetPosition = (nextPosition: PetPosition) => {
     const roundedPosition = {
       x: Math.round(nextPosition.x),
       y: Math.round(nextPosition.y),
@@ -506,6 +532,15 @@ const PetApp = () => {
           }
         : current,
     );
+  };
+
+  const persistCurrentPetPosition = () => {
+    const nextPosition = petPositionRef.current;
+    if (!nextPosition) {
+      return;
+    }
+
+    persistPetPosition(nextPosition);
   };
 
   const getBreakRunningBounds = (position: PetPosition) => {
@@ -646,6 +681,7 @@ const PetApp = () => {
 
   const handleBreakComplete = () => {
     stopBreakRunningMotion();
+    persistCurrentPetPosition();
     clearBreakInteractionTimers();
     void window.petBuddy.pet.completeBreak();
     if (payload?.focusSession.status === "paused") {
@@ -676,6 +712,7 @@ const PetApp = () => {
     acknowledgeBreakReminderIfNeeded(reminderId);
     void window.petBuddy.pet.snoozeBreak(BREAK_SNOOZE_DELAY_MS);
     stopBreakRunningMotion();
+    persistCurrentPetPosition();
     clearDeferredBreakTimer();
     clearBreakInteractionTimers();
     setBreakInteractionState("snoozed");
@@ -700,6 +737,7 @@ const PetApp = () => {
     acknowledgeBreakReminderIfNeeded(reminderId);
     void window.petBuddy.pet.muteBreakForToday();
     stopBreakRunningMotion();
+    persistCurrentPetPosition();
     clearDeferredBreakTimer();
     clearBreakInteractionTimers();
     setBreakInteractionState("sad");
@@ -716,6 +754,7 @@ const PetApp = () => {
   const handleBreakAutoDismiss = (reminderId: string) => {
     acknowledgeBreakReminderIfNeeded(reminderId);
     stopBreakRunningMotion();
+    persistCurrentPetPosition();
     clearDeferredBreakTimer();
     clearBreakInteractionTimers();
     setBreakInteractionState("sad");
@@ -845,7 +884,7 @@ const PetApp = () => {
           scheduleNextBreakDirectionChange(frameAt);
       }
 
-      updatePetPosition(clampedPosition);
+      movePetPosition(clampedPosition);
       breakRunningFrameRef.current = window.requestAnimationFrame(
         stepBreakRunningMotion,
       );
@@ -982,10 +1021,22 @@ const PetApp = () => {
         x: event.screenX - dragOffset.current.x,
         y: event.screenY - dragOffset.current.y,
       };
-      updatePetPosition(nextPosition);
+      movePetPosition(nextPosition);
     };
 
-    const handleMouseUp = () => setDragging(false);
+    const handleMouseUp = () => {
+      if (!dragging) {
+        return;
+      }
+
+      setDragging(false);
+      const nextPosition = petPositionRef.current;
+      if (!nextPosition) {
+        return;
+      }
+
+      persistPetPosition(nextPosition);
+    };
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -1063,17 +1114,17 @@ const PetApp = () => {
         </button>
       </div>
     </div>
-  ) : activeEvent?.kind !== "break" && activeEvent ? (
-    <div className="pet-bubble pet-bubble-message">
-      <div className="pet-bubble-text">{activeEvent.message}</div>
-      <div className="pet-bubble-actions">
+  ) : focusNudgeReminder && !breakReminder ? (
+    <div className="pet-dialog pet-dialog-focus">
+      <div className="pet-dialog-text">{focusNudgeReminder.message}</div>
+      <div className="pet-dialog-actions">
         <button
-          className="small-button pet-bubble-button"
+          className="small-button pet-dialog-button"
           onClick={() => {
-            acknowledgeReminder(activeEvent.id);
+            acknowledgeReminder(focusNudgeReminder.id);
           }}
         >
-          知道了
+          我知道啦
         </button>
       </div>
     </div>

@@ -67,12 +67,14 @@ export interface AppSettings {
   waterIntervalMinutes: number
   focusSessionMinutes: number
   focusModeEnabled: boolean
+  focusModePendingEnable: boolean
   focusGraceSeconds: number
   launchAtLogin: boolean
   checkUpdatesOnStartup: boolean
   selectedPetAppearance: PetAppearance['id']
   petPosition: PetPosition
   distractingApps: string[]
+  distractingDomains: string[]
   onboardingCompleted: boolean
   customSceneGifs: CustomSceneGifMap
 }
@@ -110,6 +112,7 @@ export interface SchedulerSnapshot {
 
 export interface FocusSample {
   appId: string | null
+  domain: string | null
   timestamp: number
 }
 
