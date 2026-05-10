@@ -7,7 +7,7 @@ const { autoUpdater } = electronUpdater
 
 // 配置更新源
 const UPDATE_SOURCE = process.env.UPDATE_SOURCE || 'cdn'
-const OSS_REGION = process.env.OSS_REGION || 'oss-cn-hangzhou'
+const OSS_REGION = process.env.OSS_REGION || 'oss-cn-beijing'
 const OSS_BUCKET = process.env.OSS_BUCKET || 'petbuddy-releases'
 
 // 根据配置设置更新源
