@@ -58,7 +58,6 @@
   "build": {
     "appId": "com.alanbu.petbuddy",
     "productName": "PetBuddy",
-    "electronDist": "node_modules/electron/dist",
     "afterPack": "./scripts/after-pack.mjs",
     "asar": true,
     "asarUnpack": [],
