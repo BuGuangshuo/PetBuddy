@@ -151,7 +151,7 @@ describe("settings-main actions", () => {
       "const isFocusModeEnabled = payload.settings.focusModeEnabled",
     );
     expect(source).toContain(
-      "const canConfigureFocusDetection = isFocusModeEnabled && payload.permissionState === 'granted'",
+      "const canConfigureFocusDetection = !payload.isWindows && isFocusModeEnabled && payload.permissionState === 'granted'",
     );
     expect(source).toContain("{canConfigureFocusDetection ? (");
     expect(source).toContain("<div className='field-label'>检测宽限时间</div>");

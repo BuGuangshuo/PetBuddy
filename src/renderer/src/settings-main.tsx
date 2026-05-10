@@ -14,6 +14,7 @@ import type { AppSettings, DailyStats, UpdateState } from "@shared/types";
 import { normalizeDistractingDomains } from "@shared/distractingDomains";
 import { getElapsedFocusSessionSeconds } from "@shared/focusSession";
 import "./styles.css";
+import "./iconfont.js";
 import {
   resolveAppearanceCustomizePreviewAsset,
   resolveAppearancePreviewAsset,
@@ -653,7 +654,7 @@ const SettingsApp = () => {
   );
   const isFocusModeEnabled = payload.settings.focusModeEnabled;
   const canConfigureFocusDetection =
-    isFocusModeEnabled && payload.permissionState === "granted";
+    !payload.isWindows && isFocusModeEnabled && payload.permissionState === "granted";
   const activeFocusSeconds =
     payload.focusSession.status === "active"
       ? getElapsedFocusSessionSeconds(payload.focusSession.session, now)

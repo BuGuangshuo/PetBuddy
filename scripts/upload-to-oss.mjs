@@ -52,6 +52,48 @@ async function uploadFile(localPath, remotePath) {
   }
 }
 
+async function clearOldFiles() {
+  console.log('🗑️  正在清理旧版本文件...\n')
+  
+  try {
+    // 列出所有文件
+    let marker = null
+    let allObjects = []
+    
+    do {
+      const result = await client.list({
+        'max-keys': 1000,
+        marker: marker
+      })
+      
+      if (result.objects) {
+        allObjects = allObjects.concat(result.objects)
+      }
+      
+      marker = result.nextMarker
+    } while (marker)
+    
+    if (allObjects.length === 0) {
+      console.log('✅ 没有需要清理的文件\n')
+      return
+    }
+    
+    console.log(`📋 找到 ${allObjects.length} 个文件需要删除：`)
+    allObjects.forEach(obj => console.log(`   - ${obj.name}`))
+    console.log()
+    
+    // 批量删除文件
+    const deleteResult = await client.deleteMulti(allObjects.map(obj => obj.name), {
+      quiet: true
+    })
+    
+    console.log(`✅ 已清理 ${allObjects.length} 个旧文件\n`)
+  } catch (error) {
+    console.error('❌ 清理旧文件失败:', error.message)
+    throw error
+  }
+}
+
 async function uploadRelease(version) {
   const releaseDir = path.join(__dirname, '..', 'release')
   
@@ -64,6 +106,9 @@ async function uploadRelease(version) {
   console.log(`📁 本地目录: ${releaseDir}`)
   console.log(`☁️  OSS Bucket: ${config.bucket}`)
   console.log(`🌍 区域: ${config.region}\n`)
+
+  // 先清理旧文件
+  await clearOldFiles()
 
   const files = fs.readdirSync(releaseDir)
   const uploadTasks = []
@@ -87,6 +132,7 @@ async function uploadRelease(version) {
     console.log(`\n🔗 访问地址：`)
     console.log(`   https://${config.bucket}.${config.region}.aliyuncs.com/latest.yml`)
     console.log(`\n📝 说明：`)
+    console.log(`   - 已清理所有旧版本文件`)
     console.log(`   - 所有文件直接上传到根目录`)
     console.log(`   - 供 electron-updater 自动更新使用`)
   } catch (error) {
