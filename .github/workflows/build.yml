@@ -115,7 +115,8 @@ jobs:
           path: release
 
       - name: Upload to OSS (if configured)
-        if: secrets.OSS_ACCESS_KEY_ID != '' && startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
+        continue-on-error: true
         run: node scripts/upload-to-oss.mjs ${{ github.ref_name }}
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
