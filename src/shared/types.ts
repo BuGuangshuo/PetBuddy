@@ -77,6 +77,7 @@ export interface AppSettings {
   distractingDomains: string[]
   onboardingCompleted: boolean
   customSceneGifs: CustomSceneGifMap
+  lastViewedChangelogVersion: string | null
 }
 
 export interface ReminderEvent {

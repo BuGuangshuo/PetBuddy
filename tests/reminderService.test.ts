@@ -30,7 +30,8 @@ describe('ReminderService', () => {
         distractingApps: [],
         distractingDomains: [],
         onboardingCompleted: false,
-        customSceneGifs: {}
+        customSceneGifs: {},
+        lastViewedChangelogVersion: null
       }),
       onReminder: (event) => shown.push(event),
       onReminderFinished: () => undefined
@@ -80,6 +81,7 @@ describe('ReminderService', () => {
       distractingDomains: [],
       onboardingCompleted: false,
       customSceneGifs: {},
+      lastViewedChangelogVersion: null,
       breakRemindersMutedOnDate: null as string | null
     }
     const service = new ReminderService({
@@ -122,7 +124,8 @@ describe('ReminderService', () => {
         distractingApps: [],
         distractingDomains: [],
         onboardingCompleted: false,
-        customSceneGifs: {}
+        customSceneGifs: {},
+        lastViewedChangelogVersion: null
       }),
       onReminder: (event) => shown.push(event),
       onReminderFinished: () => undefined
@@ -161,7 +164,8 @@ describe('ReminderService', () => {
         distractingApps: [],
         distractingDomains: [],
         onboardingCompleted: false,
-        customSceneGifs: {}
+        customSceneGifs: {},
+        lastViewedChangelogVersion: null
       }),
       onReminder: (event) => shown.push(event),
       onReminderFinished: (event) => finished.push(event)
@@ -209,7 +213,8 @@ describe('ReminderService', () => {
         distractingApps: [],
         distractingDomains: [],
         onboardingCompleted: false,
-        customSceneGifs: {}
+        customSceneGifs: {},
+        lastViewedChangelogVersion: null
       }),
       onReminder: (event) => shown.push(event),
       onReminderFinished: (event) => finished.push(event)

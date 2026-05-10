@@ -307,6 +307,49 @@ const SettingsApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAppearanceCustomizing, setIsAppearanceCustomizing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [changelogContent, setChangelogContent] = useState<string>("");
+  const [decorationGifUrl, setDecorationGifUrl] = useState<string>("");
+
+  // 解析 markdown 更新日志内容
+  const parseChangelog = (markdown: string) => {
+    const lines = markdown.split('\n');
+    const sections: { title: string; items: string[] }[] = [];
+    let currentSection: { title: string; items: string[] } | null = null;
+
+    for (const line of lines) {
+      // 跳过版本标题行
+      if (line.startsWith('## 🎉')) continue;
+      
+      // 检测章节标题（### 开头）
+      if (line.startsWith('### ')) {
+        if (currentSection) {
+          sections.push(currentSection);
+        }
+        currentSection = {
+          title: line.replace('### ', '').trim(),
+          items: []
+        };
+      } 
+      // 检测列表项（- 开头或** 开头）
+      else if (currentSection && (line.trim().startsWith('-') || line.trim().startsWith('**'))) {
+        let item = line.trim().replace(/^-\s*/, '');
+        
+        // 转换 markdown 粗体为 HTML
+        item = item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        if (item) {
+          currentSection.items.push(item);
+        }
+      }
+    }
+
+    if (currentSection) {
+      sections.push(currentSection);
+    }
+
+    return sections;
+  };
 
   const applyPayload = (nextPayload: SettingsPayload) => {
     setPayload(nextPayload);
@@ -389,6 +432,25 @@ const SettingsApp = () => {
       ]);
       applyPayload(nextPayload);
       setStats(today);
+      
+      // 检查是否需要显示更新日志
+      const currentVersion = nextPayload.version;
+      const lastViewedVersion = nextPayload.settings.lastViewedChangelogVersion;
+      
+      if (!lastViewedVersion || lastViewedVersion !== currentVersion) {
+        // 加载更新日志内容
+        try {
+          const [content, gifUrl] = await Promise.all([
+            window.petBuddy.changelog.getContent(),
+            window.petBuddy.changelog.getDecorationGif(),
+          ]);
+          setChangelogContent(content);
+          setDecorationGifUrl(gifUrl);
+          setShowChangelog(true);
+        } catch (err) {
+          console.error('Failed to load changelog:', err);
+        }
+      }
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : String(loadError),
@@ -504,6 +566,13 @@ const SettingsApp = () => {
     }
   };
 
+  const handleCloseChangelog = async () => {
+    setShowChangelog(false);
+    if (payload) {
+      await updateSettings({ lastViewedChangelogVersion: payload.version });
+    }
+  };
+
   const selectedAppearance = useMemo(
     () =>
       payload?.appearances.find(
@@ -610,10 +679,10 @@ const SettingsApp = () => {
             </div>
           </div>
 
-          <div className="stats-grid">
+          <div className={`stats-grid ${payload.isWindows ? 'stats-grid-3' : ''}`}>
             <StatCard
               label="休息"
-              value={stats.shown.break}
+              value={stats.acknowledged.break}
               unit="次"
               icon={<CoffeeOutlined />}
             />
@@ -629,12 +698,14 @@ const SettingsApp = () => {
               unit="分钟"
               icon={<FieldTimeOutlined />}
             />
-            <StatCard
-              label="分心"
-              value={stats.shown.focusNudge}
-              unit="次"
-              icon={<BellOutlined />}
-            />
+            {!payload.isWindows && (
+              <StatCard
+                label="分心"
+                value={stats.shown.focusNudge}
+                unit="次"
+                icon={<BellOutlined />}
+              />
+            )}
           </div>
 
           {showOnboarding ? (
@@ -1087,6 +1158,54 @@ const SettingsApp = () => {
           </section>
         </div>
       </div>
+      
+      {showChangelog && (
+        <div className="changelog-overlay" onClick={handleCloseChangelog}>
+          <div className="changelog-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="changelog-header">
+              <div className="changelog-header-content">
+                <h2>更新啦 🎉</h2>
+                <div className="changelog-version">v{payload.version}</div>
+              </div>
+              <button 
+                className="changelog-close" 
+                onClick={handleCloseChangelog}
+                aria-label="关闭"
+              >
+                ×
+              </button>
+            </div>
+            <div className="changelog-content">
+              {decorationGifUrl && (
+                <div className="changelog-decoration">
+                  <img 
+                    src={decorationGifUrl}
+                    alt=""
+                    role="presentation"
+                  />
+                </div>
+              )}
+              <div className="changelog-sections">
+                {parseChangelog(changelogContent).map((section, index) => (
+                  <div key={index} className="changelog-section">
+                    <h3 className="changelog-section-title">{section.title}</h3>
+                    <ul className="changelog-section-items">
+                      {section.items.map((item, itemIndex) => (
+                        <li key={itemIndex} dangerouslySetInnerHTML={{ __html: item }} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="changelog-footer">
+              <button className="primary-button" onClick={handleCloseChangelog}>
+                知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

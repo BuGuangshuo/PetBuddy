@@ -24,7 +24,8 @@ const createSettingsBase = (focusModeEnabled: boolean) => ({
   distractingApps: ['com.spotify.client'],
   distractingDomains: ['youtube.com'],
   onboardingCompleted: true,
-  customSceneGifs: {}
+  customSceneGifs: {},
+  lastViewedChangelogVersion: null
 })
 
 describe('FocusMonitorService', () => {

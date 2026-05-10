@@ -108,6 +108,10 @@ export interface PetBuddyApi {
   apps: {
     pickDistractingApp(): Promise<{ id: string; label: string } | null>;
   };
+  changelog: {
+    getContent(): Promise<string>;
+    getDecorationGif(): Promise<string>;
+  };
 }
 
 export const IPC_CHANNELS = {
@@ -142,4 +146,6 @@ export const IPC_CHANNELS = {
   statsToday: "stats:today",
   statsRecent: "stats:recent",
   appsPickDistracting: "apps:pick-distracting",
+  changelogGet: "changelog:get",
+  changelogGetDecoration: "changelog:get-decoration",
 } as const;

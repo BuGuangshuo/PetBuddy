@@ -1,5 +1,6 @@
 import { app, dialog, net, protocol, shell } from "electron";
 import { join } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { createPetCatalog, LOCAL_ASSET_PROTOCOL } from "./services/petCatalog";
@@ -539,6 +540,7 @@ const main = async (): Promise<void> => {
       store.muteBreakRemindersForToday();
     },
     completeBreakReminder: async () => {
+      store.markReminderAcknowledged("break");
       reminderService.completeBreak();
     },
     completeHydration: async (id: string) => {
@@ -609,6 +611,49 @@ const main = async (): Promise<void> => {
     getRecentStats: (days: number) => store.getRecentStats(days),
     pickDistractingApp: async () =>
       pickDistractingApp((options) => dialog.showOpenDialog(options)),
+    getChangelogContent: () => {
+      try {
+        const changelogPath = app.isPackaged
+          ? join(app.getAppPath(), "USER_CHANGELOG.md")
+          : join(process.cwd(), "USER_CHANGELOG.md");
+        const fullContent = readFileSync(changelogPath, "utf-8");
+        const currentVersion = store.getAppVersion();
+        
+        // 提取当前版本的更新内容
+        const versionPattern = new RegExp(`## 🎉 v${currentVersion.replace(/\./g, '\\.')}[\\s\\S]*?(?=\\n## |$)`, 'i');
+        const match = fullContent.match(versionPattern);
+        
+        if (match) {
+          return match[0];
+        }
+        
+        // 如果没有找到当前版本，返回第一个版本的内容
+        const firstVersionPattern = /## 🎉 v[\d.]+[\s\S]*?(?=\n## |$)/i;
+        const firstMatch = fullContent.match(firstVersionPattern);
+        return firstMatch ? firstMatch[0] : fullContent;
+      } catch (error) {
+        console.error("Failed to read changelog:", error);
+        return "无法加载更新日志";
+      }
+    },
+    getChangelogDecorationGif: () => {
+      try {
+        const decorationDir = app.isPackaged
+          ? join(app.getAppPath(), "pet_assets", "ChangeLogModal")
+          : join(process.cwd(), "pet_assets", "ChangeLogModal");
+        
+        const files = readdirSync(decorationDir).filter(f => f.toLowerCase().endsWith('.gif'));
+        if (files.length === 0) {
+          return "";
+        }
+        
+        const gifPath = join(decorationDir, files[0]);
+        return `${LOCAL_ASSET_PROTOCOL}://asset?path=${encodeURIComponent(gifPath)}`;
+      } catch (error) {
+        console.error("Failed to get decoration gif:", error);
+        return "";
+      }
+    },
   });
 
   if (store.getSettings().checkUpdatesOnStartup) {

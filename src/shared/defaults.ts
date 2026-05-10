@@ -40,6 +40,7 @@ export const defaultSettings: AppSettings = {
   distractingDomains: [],
   onboardingCompleted: false,
   customSceneGifs: cloneDefaultCustomSceneGifs(),
+  lastViewedChangelogVersion: null,
 };
 
 export const createEmptyStats = (date: string): DailyStats => ({

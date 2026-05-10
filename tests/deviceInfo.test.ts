@@ -93,7 +93,7 @@ describe("readDeviceInfo", () => {
   it("returns Windows version on Windows platform", async () => {
     setPlatform("win32");
     execFileSyncMock.mockReturnValue(
-      "Caption=Microsoft Windows 11 专业版\r\n",
+      "Microsoft Windows 11 专业版\r\n",
     );
 
     const { readDeviceInfo } = await import(
@@ -105,8 +105,12 @@ describe("readDeviceInfo", () => {
       modelName: "Microsoft Windows 11 专业版",
     });
     expect(execFileSyncMock).toHaveBeenCalledWith(
-      "wmic",
-      ["os", "get", "Caption", "/value"],
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; (Get-CimInstance Win32_OperatingSystem).Caption"
+      ],
       expect.objectContaining({
         encoding: "utf8",
       }),

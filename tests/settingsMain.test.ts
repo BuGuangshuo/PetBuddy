@@ -430,4 +430,16 @@ describe("settings-main actions", () => {
     expect(styles).toContain("flex-wrap: nowrap;");
     expect(styles).toContain("white-space: nowrap;");
   });
+
+  it("hides the distraction stat card on Windows platform", () => {
+    const source = readNormalizedSource("src/renderer/src/settings-main.tsx");
+    const styles = readSource("src/renderer/src/styles.css");
+
+    expect(source).toContain("{!payload.isWindows && (");
+    expect(source).toContain("<StatCard label='分心'");
+    expect(source).toContain("value={stats.shown.focusNudge}");
+    expect(source).toContain("className={`stats-grid ${payload.isWindows ? 'stats-grid-3' : ''}`}");
+    expect(styles).toContain(".stats-grid-3 {");
+    expect(styles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr));");
+  });
 });

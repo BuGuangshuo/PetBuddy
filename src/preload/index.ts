@@ -88,6 +88,10 @@ const api: PetBuddyApi = {
     pickDistractingApp: () =>
       ipcRenderer.invoke(IPC_CHANNELS.appsPickDistracting),
   },
+  changelog: {
+    getContent: () => ipcRenderer.invoke(IPC_CHANNELS.changelogGet),
+    getDecorationGif: () => ipcRenderer.invoke(IPC_CHANNELS.changelogGetDecoration),
+  },
 };
 
 contextBridge.exposeInMainWorld("petBuddy", api);

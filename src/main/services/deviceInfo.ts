@@ -27,19 +27,44 @@ const readString = (value: unknown): string | null => {
 
 const readWindowsVersion = (): string | null => {
   try {
-    const raw = execFileSync("wmic", ["os", "get", "Caption", "/value"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    // Try PowerShell Get-CimInstance (modern approach)
+    // Set UTF-8 encoding to properly display Chinese characters
+    const raw = execFileSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; (Get-CimInstance Win32_OperatingSystem).Caption"
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }
+    );
     
-    const match = raw.match(/Caption=(.+)/);
-    if (match && match[1]) {
-      return match[1].trim();
+    const version = raw.trim();
+    if (version) {
+      return version;
     }
     
     // Fallback to OS release version
     return `Windows ${release()}`;
   } catch {
+    // If PowerShell fails, try wmic (legacy)
+    try {
+      const raw = execFileSync("wmic", ["os", "get", "Caption", "/value"], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      
+      const match = raw.match(/Caption=(.+)/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    } catch {
+      // Both methods failed
+    }
+    
     return null;
   }
 };

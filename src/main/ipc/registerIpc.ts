@@ -55,6 +55,8 @@ interface RegisterIpcOptions {
   getTodayStats: () => Promise<DailyStats> | DailyStats;
   getRecentStats: (days: number) => Promise<DailyStats[]> | DailyStats[];
   pickDistractingApp: () => Promise<DistractingAppSelection | null>;
+  getChangelogContent: () => Promise<string> | string;
+  getChangelogDecorationGif: () => Promise<string> | string;
 }
 
 export const registerIpc = (options: RegisterIpcOptions): void => {
@@ -143,6 +145,12 @@ export const registerIpc = (options: RegisterIpcOptions): void => {
   );
   ipcMain.handle(IPC_CHANNELS.appsPickDistracting, () =>
     options.pickDistractingApp(),
+  );
+  ipcMain.handle(IPC_CHANNELS.changelogGet, () =>
+    options.getChangelogContent(),
+  );
+  ipcMain.handle(IPC_CHANNELS.changelogGetDecoration, () =>
+    options.getChangelogDecorationGif(),
   );
 };
 
