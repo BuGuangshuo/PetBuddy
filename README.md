@@ -1,8 +1,16 @@
 # PetBuddy
 
-PetBuddy 是一个基于 Electron + React 的 macOS 桌面宠物应用。它会常驻桌面边缘，用动态小狗陪你工作，并在合适的时间提醒你休息、喝水和回到专注状态。
+PetBuddy 是一个基于 Electron + React 的桌面宠物应用。它会常驻桌面边缘，用动态小狗陪你工作，并在合适的时间提醒你休息、喝水和回到专注状态。
 
-这个项目目前主要面向 Apple Silicon Mac（`macOS arm64`）开发和发布。
+这个项目支持 **macOS**（Apple Silicon）和 **Windows**（32位和64位）平台。
+
+## 平台支持
+
+- ✅ **macOS** (Apple Silicon / arm64) - 完整功能支持
+- ✅ **Windows** (32位 / 64位) - 核心功能支持
+  - ⚠️ 注意：Windows 上的专注模式无法自动检测分心应用，需要手动管理
+
+详细的平台差异说明请查看 [Windows 支持文档](docs/windows-support.md)。
 
 ## 功能概览
 
@@ -39,7 +47,9 @@ PetBuddy 适合希望在桌面上放一个轻量陪伴型提醒工具的用户�
 
 - Node.js `>= 20`
 - pnpm `>= 9`
-- macOS 开发环境
+- macOS 或 Windows 开发环境
+
+**Windows 用户**：如果遇到 PowerShell 执行策略问题，请查看 [Windows 快速入门指南](docs/windows-quick-start.md) 和 [PowerShell 设置指南](docs/windows-powershell-setup.md)。
 
 ### 安装依赖
 
@@ -75,7 +85,9 @@ pnpm test            # 运行 Vitest
 pnpm test:watch      # 监听模式测试
 pnpm typecheck       # TypeScript 类型检查
 pnpm package         # 本地打包 macOS arm64 版本
-pnpm package:release # 签名/公证发布包
+pnpm package:release # 签名/公证发布包（macOS）
+pnpm package:win     # 打包 Windows 版本（32位和64位）
+pnpm package:win:release # 打包 Windows 发布版本
 ```
 
 ## 项目结构
@@ -133,21 +145,83 @@ docs/          设计文档、发布说明
 
 ## 平台与权限说明
 
-- 当前发布目标主要是 `macOS arm64`
+### macOS
+- 发布目标：`macOS arm64` (Apple Silicon)
 - 专注监控依赖 macOS 的辅助功能 / Accessibility 权限
 - 开发模式下可以运行，但部分更新流程需要打包后的应用才能完整验证
 
+### Windows
+- 发布目标：`Windows x64` 和 `Windows ia32` (32位)
+- 不需要特殊权限
+- 专注模式的应用监控功能不可用（无法自动检测分心应用）
+- 其他核心功能完全可用
+
+详细说明请查看：
+- macOS 发布流程：[docs/macos-release.md](docs/macos-release.md)
+- Windows 支持说明：[docs/windows-support.md](docs/windows-support.md)
+
 ## 打包与发布
 
-本项目使用 `electron-builder` 进行打包，macOS 发布流程见：
+本项目使用 `electron-builder` 进行打包，并通过 **GitHub Actions** 实现跨平台自动构建。
 
-- [docs/macos-release.md](/Users/alanbu/PetBuddy/docs/macos-release.md)
+### 🚀 自动化发布（推荐）
+
+使用 GitHub Actions 可以在云端同时构建 Windows 和 macOS 版本：
+
+```bash
+# 1. 更新版本号（编辑 package.json）
+# 2. 提交更改
+git add .
+git commit -m "chore: bump version to 0.2.1"
+
+# 3. 创建并推送版本标签
+git tag v0.2.1
+git push origin v0.2.1
+
+# 4. GitHub Actions 会自动：
+#    - 在 Windows 虚拟机上构建 Windows 安装包
+#    - 在 macOS 虚拟机上构建 macOS 安装包
+#    - 创建 GitHub Release（草稿）
+#    - 上传所有安装包到 Release
+```
+
+详细配置说明请查看：[.github/workflows/README.md](.github/workflows/README.md)
+
+### 本地打包
+
+#### macOS 发布流程
+详见：[docs/macos-release.md](docs/macos-release.md)
+
+```bash
+pnpm run package         # 本地打包（无签名）
+pnpm run package:release # 签名和公证发布包
+```
 
 发布时需要重点确认：
-
 - `package.json` 版本号与 Git tag 一致
 - 生成并上传 `.dmg`、`.zip`、`latest-mac.yml`
 - 签名与 notarization 配置完整
+
+#### Windows 发布流程
+详见：[docs/windows-support.md](docs/windows-support.md)
+
+```bash
+pnpm run package:win:x64     # 仅打包 64 位版本
+pnpm run package:win         # 打包 32 位和 64 位版本
+pnpm run package:win:release # 打包发布版本
+```
+
+发布时需要重点确认：
+- `package.json` 版本号与 Git tag 一致
+- 准备好 `build/icon.ico` 文件
+- 生成并上传 `.exe`（两个架构）、`.zip`（两个架构）、`latest.yml`
+
+### 跨平台打包说明
+
+⚠️ **重要提示**：
+- 在 **Windows** 电脑上只能打包 Windows 版本
+- 在 **macOS** 电脑上只能打包 macOS 版本
+- 使用 **GitHub Actions** 可以在云端同时构建两个平台的版本（推荐）
 
 ## 测试
 

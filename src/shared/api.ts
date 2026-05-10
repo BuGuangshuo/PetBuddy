@@ -35,6 +35,7 @@ export interface SettingsPayload {
   updateState: UpdateState;
   version: string;
   isMacArm64: boolean;
+  isWindows: boolean;
   deviceModelName: string | null;
   deviceChipName: string | null;
 }

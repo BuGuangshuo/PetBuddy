@@ -3,7 +3,8 @@ import type { PermissionState } from '@shared/types'
 
 export const getAccessibilityStatus = (): PermissionState => {
   if (process.platform !== 'darwin') {
-    return 'denied'
+    // On Windows and other platforms, accessibility features don't require special permissions
+    return 'granted'
   }
 
   try {
@@ -15,14 +16,17 @@ export const getAccessibilityStatus = (): PermissionState => {
 
 export const promptForAccessibilityIfNeeded = (): PermissionState => {
   if (process.platform !== 'darwin') {
-    return 'denied'
+    return 'granted'
   }
 
   return systemPreferences.isTrustedAccessibilityClient(true) ? 'granted' : 'denied'
 }
 
 export const openAccessibilitySettings = async (): Promise<void> => {
-  await shell.openExternal(
-    'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
-  )
+  if (process.platform === 'darwin') {
+    await shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+    )
+  }
+  // On Windows, there's no equivalent accessibility settings to open
 }

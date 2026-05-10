@@ -94,6 +94,11 @@ export class WindowManager {
       return this.settingsWindow
     }
 
+    // 设置窗口图标（Windows 和 Linux）
+    const iconPath = process.platform === 'win32'
+      ? join(__dirname, '../../build/icon.ico')
+      : join(__dirname, '../../build/icon.png')
+
     this.settingsWindow = new BrowserWindow({
       width: 980,
       height: 860,
@@ -103,6 +108,8 @@ export class WindowManager {
       show: false,
       titleBarStyle: 'hiddenInset',
       backgroundColor: '#f6f0e7',
+      icon: iconPath,
+      autoHideMenuBar: process.platform === 'win32',
       webPreferences: {
         preload: this.preloadPath,
         sandbox: false
@@ -131,8 +138,44 @@ export class WindowManager {
     }
 
     void onOpenSettings
-    const icon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(trayIconSvg).toString('base64')}`)
-    this.tray = new Tray(icon.resize({ width: 18, height: 18 }))
+    
+    let icon: Electron.NativeImage
+    if (process.platform === 'win32') {
+      // Windows: 使用专门的托盘图标
+      const trayIcon16Path = join(__dirname, '../../build/tray-icon-16.png')
+      const trayIcon32Path = join(__dirname, '../../build/tray-icon-32.png')
+      
+      console.log('[Tray] Loading Windows tray icon from:', trayIcon16Path)
+      
+      // 加载 16x16 图标
+      icon = nativeImage.createFromPath(trayIcon16Path)
+      
+      // 如果支持高 DPI，添加 32x32 版本
+      if (!icon.isEmpty()) {
+        const icon32 = nativeImage.createFromPath(trayIcon32Path)
+        if (!icon32.isEmpty()) {
+          icon.addRepresentation({
+            scaleFactor: 2.0,
+            buffer: icon32.toPNG()
+          })
+        }
+      }
+      
+      console.log('[Tray] Icon loaded, isEmpty:', icon.isEmpty(), 'size:', icon.getSize())
+      
+      // 如果加载失败，使用 SVG 作为后备
+      if (icon.isEmpty()) {
+        console.log('[Tray] Tray icon files not found, using SVG fallback')
+        icon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(trayIconSvg).toString('base64')}`)
+        icon = icon.resize({ width: 16, height: 16 })
+      }
+    } else {
+      // macOS/Linux: 使用 SVG
+      icon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(trayIconSvg).toString('base64')}`)
+      icon = icon.resize({ width: 18, height: 18 })
+    }
+    
+    this.tray = new Tray(icon)
     this.tray.setToolTip('PetBuddy')
     this.tray.setContextMenu(
       Menu.buildFromTemplate([

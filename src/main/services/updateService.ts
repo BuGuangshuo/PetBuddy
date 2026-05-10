@@ -5,8 +5,27 @@ import type { UpdateState } from '@shared/types'
 
 const { autoUpdater } = electronUpdater
 
+// 配置更新源
+const UPDATE_SOURCE = process.env.UPDATE_SOURCE || 'cdn'
+const OSS_REGION = process.env.OSS_REGION || 'oss-cn-hangzhou'
+const OSS_BUCKET = process.env.OSS_BUCKET || 'petbuddy-releases'
+
+// 根据配置设置更新源
+if (UPDATE_SOURCE === 'cdn') {
+  const cdnUrl = `https://${OSS_BUCKET}.${OSS_REGION}.aliyuncs.com`
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: cdnUrl,
+    channel: 'latest'
+  })
+  console.log(`[UpdateService] 使用 CDN 更新源: ${cdnUrl}`)
+} else {
+  console.log('[UpdateService] 使用 GitHub 更新源')
+}
+
 const isUpdateRuntimeSupported =
-  process.platform === 'darwin' && process.arch === 'arm64' && app.isPackaged
+  ((process.platform === 'darwin' && process.arch === 'arm64') || process.platform === 'win32') &&
+  app.isPackaged
 
 const buildUnsupportedState = (
   currentVersion: string,

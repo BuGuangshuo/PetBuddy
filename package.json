@@ -1,7 +1,7 @@
 {
   "name": "petbuddy",
-  "version": "0.1.2",
-  "description": "A macOS desktop pet that keeps you on rhythm.",
+  "version": "0.2.0",
+  "description": "A cross-platform desktop pet that keeps you on rhythm. Supports macOS and Windows.",
   "main": "./out/main/index.js",
   "author": "OpenAI Codex",
   "license": "MIT",
@@ -18,8 +18,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "generate:icon": "node scripts/generate-windows-icon.mjs",
+    "set:icon": "node scripts/set-exe-icon.mjs",
     "package": "pnpm build && electron-builder --mac --arm64 --publish never",
-    "package:release": "pnpm build && electron-builder --mac --arm64 --publish never -c.forceCodeSigning=true"
+    "package:release": "pnpm build && electron-builder --mac --arm64 --publish never -c.forceCodeSigning=true",
+    "package:win": "pnpm build && electron-builder --win --ia32 --x64 --publish never",
+    "package:win:x64": "pnpm build && electron-builder --win --x64 --publish never",
+    "package:win:release": "pnpm build && electron-builder --win --ia32 --x64 --publish never",
+    "upload:oss": "node scripts/upload-to-oss.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.2",
@@ -30,15 +36,21 @@
   },
   "devDependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@types/ali-oss": "^6.23.3",
     "@types/node": "^24.10.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/semver": "^7.7.1",
     "@vitejs/plugin-react": "5.2.0",
+    "ali-oss": "^6.23.0",
+    "dotenv": "^17.4.2",
     "electron": "42.0.0",
     "electron-builder": "26.8.1",
     "electron-vite": "5.0.0",
     "jsdom": "^27.2.0",
+    "png-to-ico": "^3.0.1",
+    "rcedit": "^5.0.2",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "vite": "7.3.2",
     "vitest": "^3.2.4"
@@ -47,13 +59,21 @@
     "appId": "com.alanbu.petbuddy",
     "productName": "PetBuddy",
     "electronDist": "node_modules/electron/dist",
+    "afterPack": "./scripts/after-pack.mjs",
+    "asar": true,
+    "asarUnpack": [],
     "files": [
       "out/**/*",
       "package.json",
-      "pet_assets/**/*"
+      "pet_assets/**/*",
+      "build/icon.ico",
+      "build/icon.png",
+      "build/tray-icon-16.png",
+      "build/tray-icon-32.png"
     ],
     "directories": {
-      "buildResources": "build"
+      "buildResources": "build",
+      "output": "release"
     },
     "mac": {
       "icon": "build/icon.icns",
@@ -76,7 +96,46 @@
             "arm64"
           ]
         }
-      ]
+      ],
+      "env": {
+        "UPDATE_SOURCE": "cdn",
+        "OSS_REGION": "oss-cn-beijing",
+        "OSS_BUCKET": "petbuddy-releases"
+      }
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "env": {
+        "UPDATE_SOURCE": "cdn",
+        "OSS_REGION": "oss-cn-beijing",
+        "OSS_BUCKET": "petbuddy-releases"
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PetBuddy",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh",
+      "warningsAsErrors": false
     },
     "publish": [
       {

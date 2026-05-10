@@ -2,6 +2,61 @@
 
 所有重要变更都会记录在这里。
 
+## v0.2.0 - 2026-05-10
+
+### 新增
+
+- **Windows 平台支持**：现在支持 Windows 10/11（32位和64位）
+  - 添加 Windows 构建配置和打包脚本
+  - 支持 NSIS 安装程序和便携版 ZIP
+  - 自动生成 Windows 图标（icon.ico）
+  - 配置 PowerShell 执行策略解决方案
+  - **Windows 设备信息展示**：在设置页面显示 Windows 系统版本（如 Windows 11 专业版）
+  - **Windows 应用内更新支持**：Windows 平台现在支持检查和下载更新
+- 新增完整的 Windows 支持文档
+  - `docs/windows-support.md` - Windows 支持详细说明
+  - `docs/windows-quick-start.md` - Windows 快速入门指南
+  - `docs/windows-powershell-setup.md` - PowerShell 设置指南
+  - `docs/windows-installer-guide.md` - 安装程序详细指南
+  - `docs/WINDOWS_MIGRATION_SUMMARY.md` - 迁移总结
+- 新增图标生成脚本 `scripts/generate-windows-icon.mjs`
+- 新增 `.npmrc` 配置文件解决 PowerShell 脚本执行问题
+- 新增自定义 NSIS 脚本 `build/installer.nsh`
+
+### 调整
+
+- 更新权限服务：Windows 平台自动授予辅助功能权限（不需要特殊权限）
+- 更新专注监控服务：Windows 平台禁用应用监控功能（保留手动专注计时器）
+- 更新主进程：移除 macOS 特定的 Dock 隐藏逻辑，改为平台条件判断
+- 更新 README：添加平台支持说明和 Windows 构建命令
+- 更新项目描述为跨平台应用
+- **更新服务扩展**：`UpdateService` 现在支持 Windows 平台的应用内更新
+- **设备信息服务扩展**：`deviceInfo.ts` 现在可以读取 Windows 系统版本信息
+
+### 修复
+
+- 修复 Windows 环境下设备信息显示问题，现在正确显示系统版本
+- 修复 Windows 环境下更新检查功能不可用的问题
+- 优化 NSIS 安装程序配置：
+  - 自动在用户选择的目录下创建 PetBuddy 文件夹
+  - 添加自定义图标（安装程序、卸载程序、安装向导）
+  - 卸载时保留用户数据（设置和统计）
+  - 支持当前用户安装（不需要管理员权限）
+  - 允许用户选择以管理员身份安装
+- 禁用 Windows 代码签名（`signAndEditExecutable: false`）避免符号链接权限问题
+
+### 修复
+
+- 修复 Windows 构建时的符号链接创建错误
+- 修复 PowerShell 执行策略导致的脚本执行失败
+- 修复 Electron 安装失败问题
+
+### 已知限制
+
+- Windows 平台无法自动检测前台应用和浏览器标签页（专注模式需手动管理）
+- Windows 平台的专注监控功能不可用
+- Windows 安装程序未签名（开发版本），首次运行时 Windows Defender 可能显示警告
+
 ## v0.1.2 - 2026-05-09
 
 ### TEST

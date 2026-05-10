@@ -89,4 +89,42 @@ describe("readDeviceInfo", () => {
     });
     expect(execFileSyncMock).not.toHaveBeenCalled();
   });
+
+  it("returns Windows version on Windows platform", async () => {
+    setPlatform("win32");
+    execFileSyncMock.mockReturnValue(
+      "Caption=Microsoft Windows 11 专业版\r\n",
+    );
+
+    const { readDeviceInfo } = await import(
+      "../src/main/services/deviceInfo"
+    );
+
+    expect(readDeviceInfo()).toEqual({
+      chipName: null,
+      modelName: "Microsoft Windows 11 专业版",
+    });
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      "wmic",
+      ["os", "get", "Caption", "/value"],
+      expect.objectContaining({
+        encoding: "utf8",
+      }),
+    );
+  });
+
+  it("falls back to OS release on Windows when wmic fails", async () => {
+    setPlatform("win32");
+    execFileSyncMock.mockImplementation(() => {
+      throw new Error("wmic not found");
+    });
+
+    const { readDeviceInfo } = await import(
+      "../src/main/services/deviceInfo"
+    );
+
+    const result = readDeviceInfo();
+    expect(result.chipName).toBeNull();
+    expect(result.modelName).toBeNull();
+  });
 });

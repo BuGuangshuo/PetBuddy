@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { release } from "node:os";
 
 interface SystemProfilerHardwareEntry {
   chip_type?: unknown;
@@ -24,7 +25,33 @@ const readString = (value: unknown): string | null => {
   return normalized.length > 0 ? normalized : null;
 };
 
+const readWindowsVersion = (): string | null => {
+  try {
+    const raw = execFileSync("wmic", ["os", "get", "Caption", "/value"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    
+    const match = raw.match(/Caption=(.+)/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    
+    // Fallback to OS release version
+    return `Windows ${release()}`;
+  } catch {
+    return null;
+  }
+};
+
 export const readDeviceInfo = (): DeviceInfo => {
+  if (process.platform === "win32") {
+    return {
+      chipName: null,
+      modelName: readWindowsVersion(),
+    };
+  }
+
   if (process.platform !== "darwin") {
     return {
       chipName: null,

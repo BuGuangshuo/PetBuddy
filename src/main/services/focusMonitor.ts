@@ -243,6 +243,8 @@ export const getFrontmostSample = async (
 ): Promise<FrontmostSample> => {
   const platform = options.platform ?? process.platform
   if (platform !== 'darwin') {
+    // On Windows and other platforms, we don't have a reliable way to get the frontmost app
+    // Focus monitoring will be disabled, but the app will still work
     return { appId: null, domain: null }
   }
 

@@ -66,6 +66,12 @@ const mergeDistractingDomains = (values: string[], additions: string[]) =>
   normalizeDistractingDomains([...values, ...additions]);
 
 const getDeviceInfoText = (payload: SettingsPayload): string => {
+  // Windows 平台
+  if (payload.isWindows) {
+    return payload.deviceModelName || "Windows";
+  }
+
+  // macOS 平台
   const platformLabel = payload.isMacArm64
     ? "macOS"
     : "当前平台不在正式支持范围内";
@@ -582,7 +588,11 @@ const SettingsApp = () => {
 
   return (
     <div className="settings-root">
-      <div className="settings-drag-region" aria-hidden="true" />
+      <div 
+        className="settings-drag-region" 
+        style={{ flex: payload.isWindows ? '0 0 0px' : '0 0 36px' }}
+        aria-hidden="true" 
+      />
       <div className="settings-shell">
         <div className="settings-wrap">
           <div className="hero">
@@ -909,27 +919,29 @@ const SettingsApp = () => {
                   />
                 </div>
               </div>
-              <div className="field-row horizontal">
-                <div>
-                  <div className="field-label">开启分心检测</div>
-                  <div className="field-hint">
-                    在专注模式下浏览特定应用或网址的时候，宠物会出现分心提醒。
+              {!payload.isWindows && (
+                <div className="field-row horizontal">
+                  <div>
+                    <div className="field-label">开启分心检测</div>
+                    <div className="field-hint">
+                      在专注模式下浏览特定应用或网址的时候，宠物会出现分心提醒。
+                    </div>
+                  </div>
+                  <div className="field-control">
+                    <Toggle
+                      checked={isFocusModeEnabled}
+                      onChange={(checked) =>
+                        void runPayloadAction(
+                          window.petBuddy.app.toggleFocusMode(
+                            checked,
+                            payload.permissionState !== "granted",
+                          ),
+                        )
+                      }
+                    />
                   </div>
                 </div>
-                <div className="field-control">
-                  <Toggle
-                    checked={isFocusModeEnabled}
-                    onChange={(checked) =>
-                      void runPayloadAction(
-                        window.petBuddy.app.toggleFocusMode(
-                          checked,
-                          payload.permissionState !== "granted",
-                        ),
-                      )
-                    }
-                  />
-                </div>
-              </div>
+              )}
               {canConfigureFocusDetection ? (
                 <>
                   <div className="field-row">

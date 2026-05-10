@@ -1,7 +1,15 @@
 import { app, dialog, net, protocol, shell } from "electron";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { config as loadEnv } from "dotenv";
 import { createPetCatalog, LOCAL_ASSET_PROTOCOL } from "./services/petCatalog";
+
+// 加载 .env 文件（仅在开发环境）
+if (!app.isPackaged) {
+  const envPath = join(process.cwd(), '.env');
+  loadEnv({ path: envPath });
+  console.log('[Main] Loaded .env configuration');
+}
 import {
   getAccessibilityStatus,
   openAccessibilitySettings,
@@ -28,10 +36,17 @@ import type { AppSettings, PetPosition, ReminderKind } from "@shared/types";
 import { IPC_CHANNELS, type RendererPetAppearance, type SettingsPayload } from "@shared/api";
 
 const isMacArm64 = process.platform === "darwin" && process.arch === "arm64";
+const isWindows = process.platform === "win32";
 const FOCUS_DONE_DURATION_MS = 3000;
 
+// macOS specific keychain mock
 if (process.platform === "darwin") {
   app.commandLine.appendSwitch("use-mock-keychain");
+}
+
+// Hide dock on macOS
+if (process.platform === "darwin") {
+  app.dock?.hide();
 }
 
 protocol.registerSchemesAsPrivileged([
@@ -62,10 +77,8 @@ const main = async (): Promise<void> => {
   });
 
   if (!isMacArm64 && !app.isPackaged) {
-    console.warn("PetBuddy is designed for Apple Silicon Macs.");
+    console.warn("PetBuddy was originally designed for Apple Silicon Macs, but now supports Windows and other platforms.");
   }
-
-  app.dock?.hide();
   const deviceInfo = readDeviceInfo();
 
   const store = new PetBuddyStore();
@@ -316,6 +329,7 @@ const main = async (): Promise<void> => {
     updateState: updateService.getState(),
     version: store.getAppVersion(),
     isMacArm64,
+    isWindows,
     deviceModelName: deviceInfo.modelName,
     deviceChipName: deviceInfo.chipName,
   });

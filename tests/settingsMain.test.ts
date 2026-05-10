@@ -422,7 +422,7 @@ describe("settings-main actions", () => {
     expect(source).toContain("className='notice-actions'");
     expect(rawSource).not.toContain("{/* {showOnboarding ? (");
     expect(source).toContain("打开权限设置");
-    expect(source).toContain("知道了");
+    expect(source).toContain("GET!");
     expect(source).not.toContain(
       '? " 当前还没有辅助功能权限，专注检测暂时不会生效。"',
     );

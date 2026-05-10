@@ -77,6 +77,34 @@ describe('UpdateService', () => {
     })
   })
 
+  it('supports updates on Windows platform', async () => {
+    vi.stubGlobal('process', {
+      ...process,
+      platform: 'win32',
+      arch: 'x64',
+    })
+    checkForUpdates.mockResolvedValue({} as UpdateCheckResult)
+
+    const { UpdateService } = await import('../src/main/services/updateService')
+    const service = new UpdateService('0.1.0')
+
+    expect(service.getState()).toMatchObject({
+      status: 'idle',
+      message: '尚未检查更新。',
+      currentVersion: '0.1.0',
+      canCheck: true,
+    })
+
+    await service.checkNow()
+    emit('update-not-available')
+
+    expect(service.getState()).toMatchObject({
+      status: 'not-available',
+      message: '已经是最新版本。',
+      canCheck: true,
+    })
+  })
+
   it('reports unavailable updates in unpackaged builds instead of getting stuck in checking', async () => {
     vi.stubGlobal('process', {
       ...process,
