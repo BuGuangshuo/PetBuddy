@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Remove npm mirrors config for CI
+        run: Remove-Item -Path .npmrc -ErrorAction SilentlyContinue
+
       - name: Build Windows app
         run: pnpm run package:win:release
         env:
@@ -66,6 +69,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Remove npm mirrors config for CI
+        run: rm -f .npmrc
 
       - name: Build macOS app (without code signing)
         run: pnpm run package
