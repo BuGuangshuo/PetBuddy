@@ -74,18 +74,9 @@ async function uploadRelease(version) {
     
     if (!stat.isFile()) continue
 
-    // 安装包文件上传到版本目录和根目录
-    if (file.endsWith('.exe') || file.endsWith('.dmg') || file.endsWith('.zip')) {
-      // 上传到版本目录（归档）
-      const versionPath = `${version}/${file}`
-      uploadTasks.push(uploadFile(localPath, versionPath))
-      
-      // 上传到根目录（供 electron-updater 使用）
-      uploadTasks.push(uploadFile(localPath, file))
-    }
-    
-    // yml 和 blockmap 文件上传到根目录（最新版本信息）
-    if (file.endsWith('.yml') || file.endsWith('.blockmap')) {
+    // 所有文件直接上传到根目录
+    if (file.endsWith('.exe') || file.endsWith('.dmg') || file.endsWith('.zip') || 
+        file.endsWith('.yml') || file.endsWith('.blockmap')) {
       uploadTasks.push(uploadFile(localPath, file))
     }
   }
@@ -95,11 +86,9 @@ async function uploadRelease(version) {
     console.log(`\n✨ 所有文件上传完成！`)
     console.log(`\n🔗 访问地址：`)
     console.log(`   https://${config.bucket}.${config.region}.aliyuncs.com/latest.yml`)
-    console.log(`   https://${config.bucket}.${config.region}.aliyuncs.com/${version}/ (归档)`)
     console.log(`\n📝 说明：`)
-    console.log(`   - 安装包同时上传到根目录和版本目录`)
-    console.log(`   - 根目录文件供 electron-updater 自动更新使用`)
-    console.log(`   - 版本目录文件用于归档和手动下载`)
+    console.log(`   - 所有文件直接上传到根目录`)
+    console.log(`   - 供 electron-updater 自动更新使用`)
   } catch (error) {
     console.error('\n❌ 上传过程中出现错误')
     process.exit(1)

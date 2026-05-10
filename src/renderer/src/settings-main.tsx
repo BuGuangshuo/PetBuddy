@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   PlusOutlined,
   LinkOutlined,
+  SmileOutlined,
 } from "@ant-design/icons";
 import type { RendererPetAppearance, SettingsPayload } from "@shared/api";
 import type { AppSettings, DailyStats, UpdateState } from "@shared/types";
@@ -18,6 +19,19 @@ import {
   resolveAppearancePreviewAsset,
 } from "./sceneAssetResolver";
 import { isReminderEnabled, nextReminderInterval } from "./settingsHelpers";
+
+// 自定义休息图标 - 使用 iconfont
+const RestIcon = () => (
+  <svg
+    width="1em"
+    height="1em"
+    fill="currentColor"
+    style={{ verticalAlign: '-0.125em' }}
+    aria-hidden="true"
+  >
+    <use xlinkHref="#icon-xiuxi"></use>
+  </svg>
+);
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -320,6 +334,9 @@ const SettingsApp = () => {
     for (const line of lines) {
       // 跳过版本标题行
       if (line.startsWith('## 🎉')) continue;
+      
+      // 跳过 markdown 分隔线
+      if (line.trim() === '---') continue;
       
       // 检测章节标题（### 开头）
       if (line.startsWith('### ')) {
@@ -684,13 +701,13 @@ const SettingsApp = () => {
               label="休息"
               value={stats.acknowledged.break}
               unit="次"
-              icon={<CoffeeOutlined />}
+              icon={<RestIcon />}
             />
             <StatCard
               label="喝水"
               value={stats.acknowledged.water}
               unit="次"
-              icon={<CheckCircleOutlined />}
+              icon={<CoffeeOutlined />}
             />
             <StatCard
               label="专注"
@@ -1098,6 +1115,22 @@ const SettingsApp = () => {
                   />
                 </div>
               </div>
+              <div className="field-row horizontal">
+                <div>
+                  <div className="field-label">启动时检查更新</div>
+                  <div className="field-hint">
+                    每次打开软件时自动检查是否有新版本。
+                  </div>
+                </div>
+                <div className="field-control">
+                  <Toggle
+                    checked={payload.settings.checkUpdatesOnStartup}
+                    onChange={(checked) =>
+                      void updateSettings({ checkUpdatesOnStartup: checked })
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1122,7 +1155,12 @@ const SettingsApp = () => {
                 </div>
                 <div className="about-row about-row-update">
                   <div>
-                    <div className="about-title">更新</div>
+                    <div className="about-title">
+                      更新
+                      {payload.updateState.status === "available" && (
+                        <span className="update-badge" aria-label="有新版本可用" />
+                      )}
+                    </div>
                     <div className="about-text">
                       {payload.updateState.message}
                     </div>

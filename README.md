@@ -172,11 +172,11 @@ docs/          设计文档、发布说明
 # 1. 更新版本号（编辑 package.json）
 # 2. 提交更改
 git add .
-git commit -m "chore: bump version to 0.2.1"
+git commit -m "chore: bump version to vx.x.x"
 
 # 3. 创建并推送版本标签
-git tag v0.2.1
-git push origin v0.2.1
+git tag vx.x.x
+git push origin vx.x.x
 
 # 4. GitHub Actions 会自动：
 #    - 在 Windows 虚拟机上构建 Windows 安装包

@@ -797,6 +797,34 @@ select {
 
 .about-title {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.update-badge {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--error);
+  border-radius: 50%;
+  animation: updatePulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes updatePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.about-title {
+  font-weight: 700;
 }
 
 .about-text {

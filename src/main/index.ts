@@ -619,8 +619,8 @@ const main = async (): Promise<void> => {
         const fullContent = readFileSync(changelogPath, "utf-8");
         const currentVersion = store.getAppVersion();
         
-        // 提取当前版本的更新内容
-        const versionPattern = new RegExp(`## 🎉 v${currentVersion.replace(/\./g, '\\.')}[\\s\\S]*?(?=\\n## |$)`, 'i');
+        // 提取当前版本的更新内容（匹配任意 emoji）
+        const versionPattern = new RegExp(`## .+ v${currentVersion.replace(/\./g, '\\.')}[\\s\\S]*?(?=\\n## |$)`, 'i');
         const match = fullContent.match(versionPattern);
         
         if (match) {
@@ -628,7 +628,7 @@ const main = async (): Promise<void> => {
         }
         
         // 如果没有找到当前版本，返回第一个版本的内容
-        const firstVersionPattern = /## 🎉 v[\d.]+[\s\S]*?(?=\n## |$)/i;
+        const firstVersionPattern = /## .+ v[\d.]+[\s\S]*?(?=\n## |$)/i;
         const firstMatch = fullContent.match(firstVersionPattern);
         return firstMatch ? firstMatch[0] : fullContent;
       } catch (error) {

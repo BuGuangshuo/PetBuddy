@@ -33,7 +33,7 @@ export const defaultSettings: AppSettings = {
   focusModePendingEnable: false,
   focusGraceSeconds: 20,
   launchAtLogin: false,
-  checkUpdatesOnStartup: false,
+  checkUpdatesOnStartup: true,
   selectedPetAppearance: "line-dog",
   petPosition: { x: 48, y: 48 },
   distractingApps: [...DEFAULT_DISTRACTING_APPS],
