@@ -1,6 +1,6 @@
 {
   "name": "petbuddy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A cross-platform desktop pet that keeps you on rhythm. Supports macOS and Windows.",
   "main": "./out/main/index.js",
   "author": "OpenAI Codex",
@@ -68,7 +68,8 @@
       "build/icon.ico",
       "build/icon.png",
       "build/tray-icon-16.png",
-      "build/tray-icon-32.png"
+      "build/tray-icon-32.png",
+      "USER_CHANGELOG.md"
     ],
     "directories": {
       "buildResources": "build",
