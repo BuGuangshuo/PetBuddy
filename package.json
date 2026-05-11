@@ -75,6 +75,7 @@
       "USER_CHANGELOG.md"
     ],
 
+    "npmRebuild": false,
     "directories": {
       "buildResources": "build",
       "output": "release"
