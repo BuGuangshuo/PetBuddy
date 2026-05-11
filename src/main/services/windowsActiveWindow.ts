@@ -14,6 +14,7 @@ let isInitialized = false
  */
 export const initializeWindowsActiveWindow = (): boolean => {
   if (isInitialized) {
+    console.log('[Windows] Active window detection already initialized')
     return true
   }
 
@@ -22,7 +23,7 @@ export const initializeWindowsActiveWindow = (): boolean => {
     ActiveWindow = require('@paymoapp/active-window').default
     ActiveWindow.initialize()
     isInitialized = true
-    console.log('[Windows] Active window detection initialized')
+    console.log('[Windows] Active window detection initialized successfully')
     return true
   } catch (error) {
     console.error('[Windows] Failed to initialize active window detection:', error)
@@ -99,14 +100,20 @@ const extractDomainFromBrowserTitle = (title: string): string | null => {
  * 获取Windows平台的前台窗口信息
  */
 export const getWindowsFrontmostSample = async (): Promise<FrontmostSample> => {
+  console.log('[Windows] getWindowsFrontmostSample called, isInitialized:', isInitialized)
+  
   if (!isInitialized || !ActiveWindow) {
+    console.warn('[Windows] Active window not initialized or module not loaded')
     return { appId: null, domain: null }
   }
 
   try {
     const windowInfo = ActiveWindow.getActiveWindow()
     
+    console.log('[Windows] Raw window info:', windowInfo)
+    
     if (!windowInfo) {
+      console.warn('[Windows] No active window info returned')
       return { appId: null, domain: null }
     }
 

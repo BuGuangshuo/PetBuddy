@@ -76,10 +76,15 @@ export class FocusMonitorService {
   start(): void {
     this.stop()
     const runId = ++this.runId
-    console.log('[FocusMonitor] Starting monitor, runId:', runId)
+    console.log('[FocusMonitor] ========== Starting monitor, runId:', runId, '==========')
     this.timer = setInterval(() => {
+      console.log('[FocusMonitor] ========== Interval triggered, calling poll ==========')
       void this.poll(runId)
     }, 5000)
+    
+    // 立即执行一次 poll
+    console.log('[FocusMonitor] ========== Executing initial poll ==========')
+    void this.poll(runId)
   }
 
   stop(): void {
@@ -103,21 +108,40 @@ export class FocusMonitorService {
   }
 
   private async poll(runId: number): Promise<void> {
+    console.log('[FocusMonitor] ========== POLL START ==========')
     try {
       const settings = this.options.getSettings()
+      console.log('[FocusMonitor] Settings check:', {
+        focusModeEnabled: settings.focusModeEnabled,
+        distractingApps: settings.distractingApps,
+        distractingDomains: settings.distractingDomains,
+        focusGraceSeconds: settings.focusGraceSeconds
+      })
+      
+      const shouldMonitor = this.options.shouldMonitor()
+      const hasPermission = this.options.hasPermission()
+      console.log('[FocusMonitor] Conditions:', { shouldMonitor, hasPermission })
+      
       if (
         !settings.focusModeEnabled ||
-        !this.options.shouldMonitor() ||
-        !this.options.hasPermission()
+        !shouldMonitor ||
+        !hasPermission
       ) {
         if (this.isActiveRun(runId)) {
+          console.log('[FocusMonitor] Resetting state due to conditions not met')
           this.resetState()
         }
+        console.log('[FocusMonitor] ========== POLL END (conditions not met) ==========')
         return
       }
 
+      console.log('[FocusMonitor] Reading frontmost sample...')
       const sample = await this.readFrontmostSample()
+      console.log('[FocusMonitor] ========== SAMPLE RECEIVED ==========', sample)
+      
       if (!this.isActiveRun(runId)) {
+        console.log('[FocusMonitor] Run is no longer active, skipping')
+        console.log('[FocusMonitor] ========== POLL END (stale run) ==========')
         return
       }
 
@@ -127,11 +151,14 @@ export class FocusMonitorService {
         !this.options.shouldMonitor() ||
         !this.options.hasPermission()
       ) {
+        console.log('[FocusMonitor] Conditions changed, resetting state')
         this.resetState()
+        console.log('[FocusMonitor] ========== POLL END (conditions changed) ==========')
         return
       }
 
       const previousDistracted = this.state.totalDistractedSeconds
+      console.log('[FocusMonitor] Calling stepFocusMonitor...')
       this.state = stepFocusMonitor(
         this.state,
         { ...sample, timestamp: Date.now() },
@@ -141,9 +168,11 @@ export class FocusMonitorService {
           focusGraceSeconds: nextSettings.focusGraceSeconds
         }
       )
+      console.log('[FocusMonitor] New state:', this.state)
 
       const delta = this.state.totalDistractedSeconds - previousDistracted
       if (delta > 0) {
+        console.log('[FocusMonitor] ========== DISTRACTED DELTA:', delta, '==========')
         this.options.onDistractedDelta(delta)
       }
 
@@ -152,10 +181,14 @@ export class FocusMonitorService {
       if (!this.state.currentDistractingApp) {
         this.hasNudgedCurrentSession = false
       } else if (this.state.shouldNudge && !this.hasNudgedCurrentSession) {
+        console.log('[FocusMonitor] ========== NUDGE TRIGGERED! ==========')
         this.hasNudgedCurrentSession = true
         this.options.onNudge()
       }
-    } catch {
+      
+      console.log('[FocusMonitor] ========== POLL END (success) ==========')
+    } catch (error) {
+      console.error('[FocusMonitor] ========== POLL ERROR ==========', error)
       // Ignore transient sample-read failures and continue polling on the next interval.
     }
   }
