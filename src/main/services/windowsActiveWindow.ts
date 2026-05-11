@@ -116,16 +116,26 @@ export const getWindowsFrontmostSample = async (): Promise<FrontmostSample> => {
     
     // 如果是浏览器，尝试从标题中提取域名
     let domain: string | null = null
-    if (isBrowserApp(windowInfo.application, windowInfo.path)) {
+    const isBrowser = isBrowserApp(windowInfo.application, windowInfo.path)
+    if (isBrowser) {
       domain = extractDomainFromBrowserTitle(windowInfo.title)
     }
+
+    console.log('[Windows] Active window:', {
+      appId,
+      domain,
+      isBrowser,
+      application: windowInfo.application,
+      path: windowInfo.path,
+      title: windowInfo.title
+    })
 
     return {
       appId: appId || null,
       domain
     }
   } catch (error) {
-    // 静默失败，返回空结果
+    console.error('[Windows] Failed to get active window:', error)
     return { appId: null, domain: null }
   }
 }

@@ -20,6 +20,43 @@ const BROWSER_APP_IDS = new Set([
   'com.microsoft.edgemac'
 ])
 
+/**
+ * 规范化Windows应用路径，用于比较
+ * 统一转换为小写并使用反斜杠
+ */
+const normalizeWindowsPath = (path: string): string => {
+  return path.toLowerCase().replace(/\//g, '\\')
+}
+
+/**
+ * 检查应用是否为浏览器（支持 macOS 和 Windows）
+ */
+const isBrowserApp = (appId: string): boolean => {
+  // macOS: 使用 bundle identifier
+  if (BROWSER_APP_IDS.has(appId)) {
+    return true
+  }
+  
+  // Windows: 检查路径中是否包含浏览器名称
+  const appIdLower = appId.toLowerCase()
+  const windowsBrowsers = ['chrome', 'msedge', 'firefox', 'opera', 'brave', 'vivaldi', 'iexplore', 'microsoftedge']
+  return windowsBrowsers.some(browser => appIdLower.includes(browser))
+}
+
+/**
+ * 检查应用ID是否匹配分心应用列表（支持Windows路径匹配）
+ */
+const isDistractingApp = (appId: string, distractingApps: string[]): boolean => {
+  // 直接匹配
+  if (distractingApps.includes(appId)) {
+    return true
+  }
+  
+  // Windows路径规范化匹配
+  const normalizedAppId = normalizeWindowsPath(appId)
+  return distractingApps.some(app => normalizeWindowsPath(app) === normalizedAppId)
+}
+
 export const createInitialFocusState = (): FocusMonitorState => ({
   currentDistractingApp: null,
   distractingSince: null,
@@ -65,12 +102,24 @@ export const stepFocusMonitor = (
   sample: FocusSampleInput,
   options: FocusOptions
 ): FocusMonitorState => {
-  const isBrowserApp = sample.appId !== null && BROWSER_APP_IDS.has(sample.appId)
+  const isBrowser = sample.appId !== null && isBrowserApp(sample.appId)
   const isDistracting =
     sample.appId !== null &&
-    (isBrowserApp
+    (isBrowser
       ? domainMatchesList(sample.domain ?? null, options.distractingDomains ?? [])
-      : options.distractingApps.includes(sample.appId))
+      : isDistractingApp(sample.appId, options.distractingApps))
+
+  // 调试日志
+  if (sample.appId !== null) {
+    console.log('[FocusMonitor] Sample:', {
+      appId: sample.appId,
+      domain: sample.domain,
+      isBrowser,
+      isDistracting,
+      distractingApps: options.distractingApps,
+      distractingDomains: options.distractingDomains
+    })
+  }
 
   if (!isDistracting) {
     const focusStart = previous.currentDistractingApp
