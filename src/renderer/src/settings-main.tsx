@@ -666,13 +666,11 @@ const SettingsApp = () => {
   const displayedFocusMinutes = Math.floor(
     (stats.focusDurationSeconds + activeFocusSeconds) / 60,
   );
-  const updateActionLabel =
-    payload.updateState.status === "available" ? "立即更新" : "检查更新";
+  const updateActionLabel = payload.updateState.actionLabel ?? "检查更新";
   const updateActionDisabled =
     !payload.updateState.canCheck ||
     payload.updateState.status === "checking" ||
-    payload.updateState.status === "downloading" ||
-    payload.updateState.status === "downloaded";
+    payload.updateState.status === "downloading";
   const showUpdateProgress = payload.updateState.status === "downloading";
 
   return (
@@ -1114,22 +1112,6 @@ const SettingsApp = () => {
                   />
                 </div>
               </div>
-              <div className="field-row horizontal">
-                <div>
-                  <div className="field-label">启动时检查更新</div>
-                  <div className="field-hint">
-                    每次打开软件时自动检查是否有新版本。
-                  </div>
-                </div>
-                <div className="field-control">
-                  <Toggle
-                    checked={payload.settings.checkUpdatesOnStartup}
-                    onChange={(checked) =>
-                      void updateSettings({ checkUpdatesOnStartup: checked })
-                    }
-                  />
-                </div>
-              </div>
             </div>
           </section>
 
@@ -1154,12 +1136,10 @@ const SettingsApp = () => {
                 </div>
                 <div className="about-row about-row-update">
                   <div>
-                    <div className="about-title">
-                      更新
-                      {payload.updateState.status === "available" && (
-                        <span className="update-badge" aria-label="有新版本可用" />
-                      )}
-                    </div>
+                    <div className="about-title">更新</div>
+                    {payload.updateState.status === "available" && (
+                      <span className="update-badge" aria-label="有新版本可用" />
+                    )}
                     <div className="about-text">
                       {payload.updateState.message}
                     </div>
@@ -1181,6 +1161,7 @@ const SettingsApp = () => {
                       onClick={() =>
                         void runUpdateAction(
                           payload.updateState.status === "available"
+                            || payload.updateState.status === "downloaded"
                             ? window.petBuddy.updates.download()
                             : window.petBuddy.updates.checkNow(),
                         )

@@ -152,4 +152,5 @@ export interface UpdateState {
   availableVersion: string | null
   downloadPercent: number | null
   canCheck: boolean
+  actionLabel?: string | null
 }
