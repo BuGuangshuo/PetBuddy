@@ -1,6 +1,6 @@
 {
   "name": "petbuddy",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "A cross-platform desktop pet that keeps you on rhythm. Supports macOS and Windows.",
   "main": "./out/main/index.js",
   "author": "OpenAI Codex",
@@ -89,7 +89,7 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "notarize": false,
-      "identity": null,
+      "identity": "-",
       "target": [
         {
           "target": "dmg",

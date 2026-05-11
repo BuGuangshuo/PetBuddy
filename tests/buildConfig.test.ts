@@ -12,6 +12,7 @@ type PackageJson = {
         arch?: string[]
       }>
       icon?: string
+      identity?: string | null
       hardenedRuntime?: boolean
       gatekeeperAssess?: boolean
       entitlements?: string
@@ -52,6 +53,7 @@ describe('macOS packaging configuration', () => {
     const packageJson = loadPackageJson()
 
     expect(packageJson.build?.mac?.icon).toBe('build/icon.icns')
+    expect(packageJson.build?.mac?.identity).toBe('-')
     expect(packageJson.build?.mac?.hardenedRuntime).toBe(true)
     expect(packageJson.build?.mac?.gatekeeperAssess).toBe(false)
     expect(packageJson.build?.mac?.entitlements).toBe('build/entitlements.mac.plist')
