@@ -3,11 +3,53 @@
  * 使用 @paymoapp/active-window 库来获取当前活动窗口信息
  */
 
+import { createRequire } from 'node:module'
+import { join, win32 } from 'node:path'
+import { app } from 'electron'
 import type { FrontmostSample } from './focusMonitor'
 import { normalizeDistractingDomain } from '@shared/distractingDomains'
 
 let ActiveWindow: any = null
 let isInitialized = false
+const requireForMain = createRequire(import.meta.url)
+
+interface LoadActiveWindowModuleOptions {
+  isPackaged?: boolean
+  resourcesPath?: string
+  requireFn?: (specifier: string) => unknown
+}
+
+const loadDefaultRequire = (): ((specifier: string) => unknown) => {
+  return requireForMain as (specifier: string) => unknown
+}
+
+export const loadActiveWindowModule = (options: LoadActiveWindowModuleOptions = {}): any => {
+  const requireFn = options.requireFn ?? loadDefaultRequire()
+
+  try {
+    const loaded = requireFn('@paymoapp/active-window') as { default?: unknown }
+    return loaded?.default ?? loaded
+  } catch (primaryError) {
+    if (!options.isPackaged || !options.resourcesPath) {
+      throw primaryError
+    }
+
+    const pathJoin = options.resourcesPath.includes('\\') ? win32.join : join
+    const unpackedModulePath = pathJoin(
+      options.resourcesPath,
+      'app.asar.unpacked',
+      'node_modules',
+      '@paymoapp',
+      'active-window',
+      'dist',
+      'index.js'
+    )
+
+    console.warn('[Windows] Falling back to unpacked active-window module:', unpackedModulePath)
+    const loaded = requireFn(unpackedModulePath) as { default?: unknown }
+    return loaded?.default ?? loaded
+  }
+}
 
 /**
  * 初始化Windows活动窗口检测
@@ -22,8 +64,10 @@ export const initializeWindowsActiveWindow = (): boolean => {
 
   try {
     console.log('[Windows] Attempting to load @paymoapp/active-window module...')
-    // 动态导入native模块，避免在非Windows平台加载
-    ActiveWindow = require('@paymoapp/active-window').default
+    ActiveWindow = loadActiveWindowModule({
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath
+    })
     console.log('[Windows] Module loaded:', typeof ActiveWindow)
     
     console.log('[Windows] Calling ActiveWindow.initialize()...')

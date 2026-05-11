@@ -193,9 +193,15 @@ git push origin vx.x.x
 详见：[docs/macos-release.md](docs/macos-release.md)
 
 ```bash
-pnpm run package         # 本地打包（无签名）
+pnpm run package         # 本地打包（ad-hoc 签名）
 pnpm run package:release # 签名和公证发布包
+pnpm run verify:mac      # 验证签名状态
 ```
+
+**代码签名说明**：
+- 项目已配置 ad-hoc 签名，适合开发和个人使用
+- 如遇到自动更新签名验证错误，请重新构建应用
+- 详细的代码签名配置请查看：[docs/CODE_SIGNING_GUIDE.md](docs/CODE_SIGNING_GUIDE.md)
 
 发布时需要重点确认：
 - `package.json` 版本号与 Git tag 一致

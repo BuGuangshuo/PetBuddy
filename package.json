@@ -25,7 +25,8 @@
     "package:win": "pnpm build && electron-builder --win --ia32 --x64 --publish never",
     "package:win:x64": "pnpm build && electron-builder --win --x64 --publish never",
     "package:win:release": "pnpm build && electron-builder --win --ia32 --x64 --publish never",
-    "upload:oss": "node scripts/upload-to-oss.mjs"
+    "upload:oss": "node scripts/upload-to-oss.mjs",
+    "verify:mac": "bash scripts/verify-mac-signature.sh"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.2",
@@ -83,11 +84,12 @@
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "notarize": false,
+      "identity": null,
       "target": [
         {
           "target": "dmg",
@@ -136,6 +138,7 @@
       {
         "provider": "github"
       }
-    ]
+    ],
+    "electronUpdaterCompatibility": ">=2.16"
   }
 }

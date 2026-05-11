@@ -46,4 +46,44 @@ describe('Windows Active Window Detection', () => {
       expect(name).toBe(expectedNames[index])
     })
   })
+
+  it('falls back to the unpacked package path when packaged require fails', async () => {
+    const moduleExports = {
+      default: {
+        initialize: vi.fn(),
+        getActiveWindow: vi.fn()
+      }
+    }
+    const requireFn = vi
+      .fn<(specifier: string) => unknown>()
+      .mockImplementation((specifier: string) => {
+        if (specifier === '@paymoapp/active-window') {
+          throw new Error('Cannot find module')
+        }
+
+        if (
+          specifier ===
+          'C:\\Program Files\\PetBuddy\\resources\\app.asar.unpacked\\node_modules\\@paymoapp\\active-window\\dist\\index.js'
+        ) {
+          return moduleExports
+        }
+
+        throw new Error(`Unexpected module request: ${specifier}`)
+      })
+
+    const { loadActiveWindowModule } = await import('../src/main/services/windowsActiveWindow')
+
+    const loaded = loadActiveWindowModule({
+      isPackaged: true,
+      resourcesPath: 'C:\\Program Files\\PetBuddy\\resources',
+      requireFn
+    })
+
+    expect(loaded).toBe(moduleExports.default)
+    expect(requireFn).toHaveBeenNthCalledWith(1, '@paymoapp/active-window')
+    expect(requireFn).toHaveBeenNthCalledWith(
+      2,
+      'C:\\Program Files\\PetBuddy\\resources\\app.asar.unpacked\\node_modules\\@paymoapp\\active-window\\dist\\index.js'
+    )
+  })
 })
