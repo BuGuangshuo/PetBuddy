@@ -2,6 +2,53 @@
 
 所有重要变更都会记录在这里。
 
+## v0.2.4 - 待发布
+
+### 新增
+
+- **Windows 平台分心功能支持**：Windows 用户现在可以使用完整的分心检测功能
+  - 支持检测当前活动的应用程序
+  - 支持检测浏览器访问的域名（Chrome、Edge、Firefox、Opera、Brave、Vivaldi）
+  - 使用 `@paymoapp/active-window` 原生模块实现跨平台检测
+  - 与 macOS 版本功能对等，提供一致的用户体验
+  - 无需特殊权限，开箱即用
+
+### 改进
+
+- **跨平台焦点监控**：重构焦点监控服务，统一 macOS 和 Windows 的实现接口
+  - 新增 `src/main/services/windowsActiveWindow.ts` 模块
+  - 更新 `src/main/services/focusMonitor.ts` 支持 Windows 平台
+  - 在应用启动时自动初始化平台特定的检测模块
+  - 统一的 `FrontmostSample` 接口设计
+
+- **浏览器域名提取**：Windows 平台从浏览器窗口标题中智能提取域名
+  - 支持多种浏览器标题格式
+  - 自动规范化域名（移除 www 前缀等）
+  - 与 macOS 的 AppleScript 方式保持接口一致
+
+- **错误处理增强**：所有原生模块调用都有完善的错误处理和降级策略
+  - 检测失败不影响应用正常运行
+  - 静默失败，返回空样本
+  - 详细的日志输出便于调试
+
+### 文档
+
+- 新增 `docs/windows-focus-detection.md` - Windows 平台技术实现文档
+- 新增 `docs/windows-focus-setup-guide.md` - Windows 用户设置指南
+- 新增 `docs/windows-focus-implementation-summary.md` - 实现总结文档
+- 更新 `README.md` - 说明 Windows 平台现已支持完整功能
+- 更新平台支持说明，移除 Windows 功能限制提示
+
+### 测试
+
+- 新增 `tests/windowsActiveWindow.test.ts` - Windows 活动窗口检测测试
+- 更新 `tests/focusMonitor.test.ts` - 添加 Windows 平台测试用例
+- 所有测试通过，类型检查通过
+
+### 依赖
+
+- 新增 `@paymoapp/active-window@2.1.4` - 跨平台活动窗口检测原生模块
+
 ## v0.2.3 - 2026-05-10
 
 ### 修复

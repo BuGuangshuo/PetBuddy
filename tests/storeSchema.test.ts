@@ -289,6 +289,17 @@ describe('normalizeStoreShape', () => {
     expect(store.settings.focusModeEnabled).toBe(defaultSettings.focusModeEnabled)
   })
 
+  test('preserves the last viewed changelog version during normalization', () => {
+    const store = normalizeStoreShape({
+      version: 0,
+      settings: {
+        lastViewedChangelogVersion: '0.2.3'
+      }
+    })
+
+    expect(store.settings.lastViewedChangelogVersion).toBe('0.2.3')
+  })
+
   test('falls back to defaults for negative or fractional persisted interval settings', () => {
     const store = normalizeStoreShape({
       version: 0,

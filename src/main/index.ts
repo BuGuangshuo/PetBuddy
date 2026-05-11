@@ -16,7 +16,7 @@ import {
   openAccessibilitySettings,
   promptForAccessibilityIfNeeded,
 } from "./services/permissions";
-import { FocusMonitorService } from "./services/focusMonitor";
+import { FocusMonitorService, initializeFocusMonitor } from "./services/focusMonitor";
 import { registerIpc, emitPetEvent } from "./ipc/registerIpc";
 import { ReminderService } from "./services/reminderService";
 import { PetBuddyStore } from "./services/store";
@@ -80,6 +80,10 @@ const main = async (): Promise<void> => {
   if (!isMacArm64 && !app.isPackaged) {
     console.warn("PetBuddy was originally designed for Apple Silicon Macs, but now supports Windows and other platforms.");
   }
+  
+  // 初始化平台特定的焦点监控功能
+  initializeFocusMonitor();
+  
   const deviceInfo = readDeviceInfo();
 
   const store = new PetBuddyStore();

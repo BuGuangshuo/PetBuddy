@@ -3,10 +3,11 @@ import { promisify } from 'node:util'
 import { createInitialFocusState, stepFocusMonitor } from '@shared/focusSession'
 import { normalizeDistractingDomain } from '@shared/distractingDomains'
 import type { AppSettings } from '@shared/types'
+import { getWindowsFrontmostSample, initializeWindowsActiveWindow } from './windowsActiveWindow'
 
 const execFileAsync = promisify(execFile)
 
-interface FrontmostSample {
+export interface FrontmostSample {
   appId: string | null
   domain: string | null
 }
@@ -242,20 +243,36 @@ export const getFrontmostSample = async (
   options: GetFrontmostSampleOptions = {}
 ): Promise<FrontmostSample> => {
   const platform = options.platform ?? process.platform
-  if (platform !== 'darwin') {
-    // On Windows and other platforms, we don't have a reliable way to get the frontmost app
-    // Focus monitoring will be disabled, but the app will still work
-    return { appId: null, domain: null }
+  
+  // Windows平台使用native模块获取活动窗口
+  if (platform === 'win32') {
+    return getWindowsFrontmostSample()
+  }
+  
+  // macOS平台使用AppleScript
+  if (platform === 'darwin') {
+    const runScript = options.runAppleScript ?? runAppleScript
+    const appId = await readFrontmostAppId(runScript)
+    if (appId === null) {
+      return { appId: null, domain: null }
+    }
+
+    return {
+      appId,
+      domain: await readBrowserDomain(appId, runScript)
+    }
   }
 
-  const runScript = options.runAppleScript ?? runAppleScript
-  const appId = await readFrontmostAppId(runScript)
-  if (appId === null) {
-    return { appId: null, domain: null }
-  }
+  // 其他平台不支持
+  return { appId: null, domain: null }
+}
 
-  return {
-    appId,
-    domain: await readBrowserDomain(appId, runScript)
+/**
+ * 初始化平台特定的活动窗口检测
+ * 在应用启动时调用
+ */
+export const initializeFocusMonitor = (): void => {
+  if (process.platform === 'win32') {
+    initializeWindowsActiveWindow()
   }
 }

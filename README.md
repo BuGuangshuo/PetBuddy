@@ -7,8 +7,8 @@ PetBuddy 是一个基于 Electron + React 的桌面宠物应用。它会常驻�
 ## 平台支持
 
 - ✅ **macOS** (Apple Silicon / arm64) - 完整功能支持
-- ✅ **Windows** (32位 / 64位) - 核心功能支持
-  - ⚠️ 注意：Windows 上的专注模式无法自动检测分心应用，需要手动管理
+- ✅ **Windows** (32位 / 64位) - 完整功能支持
+  - ✅ 专注模式现已支持自动检测分心应用和浏览器域名
 
 详细的平台差异说明请查看 [Windows 支持文档](docs/windows-support.md)。
 

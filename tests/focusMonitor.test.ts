@@ -251,3 +251,21 @@ describe('FocusMonitorService', () => {
     service.stop()
   })
 })
+
+  test('returns null sample on Windows when native module is not initialized', async () => {
+    const sample = await getFrontmostSample({ platform: 'win32' })
+    
+    expect(sample).toEqual({
+      appId: null,
+      domain: null
+    })
+  })
+
+  test('returns null sample on unsupported platforms', async () => {
+    const sample = await getFrontmostSample({ platform: 'linux' })
+    
+    expect(sample).toEqual({
+      appId: null,
+      domain: null
+    })
+  })

@@ -357,6 +357,20 @@ describe("settings-main actions", () => {
     expect(source).toContain("检查更新");
   });
 
+  it("only shows the changelog when the current version has not been acknowledged yet", () => {
+    const source = readNormalizedSource("src/renderer/src/settings-main.tsx");
+
+    expect(source).toContain(
+      "const lastViewedVersion = nextPayload.settings.lastViewedChangelogVersion",
+    );
+    expect(source).toContain(
+      "if (!lastViewedVersion || lastViewedVersion !== currentVersion)",
+    );
+    expect(source).toContain(
+      "await updateSettings({ lastViewedChangelogVersion: payload.version })",
+    );
+  });
+
   it("shows the current device model name in the about device info row when available", () => {
     const source = readNormalizedSource("src/renderer/src/settings-main.tsx");
 

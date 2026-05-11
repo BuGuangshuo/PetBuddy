@@ -157,6 +157,10 @@ const mergeSettings = (value: unknown): AppSettings => {
           persisted.distractingDomains.filter((domain): domain is string => typeof domain === 'string')
         )
       : [...defaultSettings.distractingDomains],
+    lastViewedChangelogVersion:
+      typeof persisted.lastViewedChangelogVersion === 'string' || persisted.lastViewedChangelogVersion === null
+        ? persisted.lastViewedChangelogVersion
+        : defaultSettings.lastViewedChangelogVersion,
     onboardingCompleted: isBoolean(persisted.onboardingCompleted)
       ? persisted.onboardingCompleted
       : defaultSettings.onboardingCompleted,

@@ -1,6 +1,6 @@
 {
   "name": "petbuddy",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A cross-platform desktop pet that keeps you on rhythm. Supports macOS and Windows.",
   "main": "./out/main/index.js",
   "author": "OpenAI Codex",
@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.2",
+    "@paymoapp/active-window": "^2.1.4",
     "electron-store": "11.0.2",
     "electron-updater": "6.8.3",
     "react": "19.2.6",
