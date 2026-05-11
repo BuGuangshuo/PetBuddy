@@ -431,6 +431,21 @@ const main = async (): Promise<void> => {
       console.log('[FocusMonitor] Nudge triggered!');
       reminderService.enqueue("focusNudge");
     },
+    onPermissionIssue: (issue, appName) => {
+      if (issue !== "browser-automation-denied") {
+        return;
+      }
+
+      void dialog.showMessageBox({
+        type: "warning",
+        buttons: ["知道了"],
+        defaultId: 0,
+        noLink: true,
+        title: "需要浏览器控制权限",
+        message: "PetBuddy 还没有读取浏览器当前标签页的权限。",
+        detail: `请到 系统设置 > 隐私与安全性 > 自动化 中，允许 PetBuddy 控制 ${appName ?? "对应浏览器"}，然后再试一次分心检测。`,
+      });
+    },
   });
 
   windows.createTray(

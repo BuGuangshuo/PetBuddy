@@ -96,6 +96,20 @@ describe('FocusMonitorService', () => {
     expect(runAppleScript.mock.calls[1]?.[0]).toContain('active tab')
   })
 
+  test('marks browser automation permission denial when URL lookup is blocked on macOS', async () => {
+    const runAppleScript = vi
+      .fn<(_: string) => Promise<string | null>>()
+      .mockResolvedValueOnce('com.google.Chrome')
+      .mockRejectedValueOnce(new Error('Not authorized to send Apple events to Google Chrome. (-1743)'))
+
+    await expect(getFrontmostSample({ platform: 'darwin', runAppleScript })).resolves.toEqual({
+      appId: 'com.google.Chrome',
+      domain: null,
+      permissionIssue: 'browser-automation-denied',
+      permissionIssueAppName: 'Google Chrome'
+    })
+  })
+
   test('skips browser URL lookup for non-browser apps', async () => {
     const runAppleScript = vi.fn<(_: string) => Promise<string | null>>().mockResolvedValueOnce('com.spotify.client')
 

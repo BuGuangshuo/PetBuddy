@@ -10,6 +10,8 @@ const execFileAsync = promisify(execFile)
 export interface FrontmostSample {
   appId: string | null
   domain: string | null
+  permissionIssue?: 'browser-automation-denied' | null
+  permissionIssueAppName?: string | null
 }
 
 interface FocusMonitorOptions {
@@ -19,6 +21,7 @@ interface FocusMonitorOptions {
   onDistractedDelta: (seconds: number) => void
   onFocusStreak: (seconds: number) => void
   onNudge: () => void
+  onPermissionIssue?: (issue: NonNullable<FrontmostSample['permissionIssue']>, appName: string | null) => void
   getFrontmostSample?: () => Promise<FrontmostSample>
   getFrontmostApp?: () => Promise<string | null>
 }
@@ -32,6 +35,12 @@ interface BrowserDescriptor {
   bundleId: string
   appName: string
   urlScript: string
+}
+
+interface BrowserDomainReadResult {
+  domain: string | null
+  permissionIssue?: FrontmostSample['permissionIssue']
+  permissionIssueAppName?: string | null
 }
 
 const FRONTMOST_APP_BUNDLE_ID_SCRIPT =
@@ -69,6 +78,7 @@ export class FocusMonitorService {
   private timer: NodeJS.Timeout | null = null
   private state = createInitialFocusState()
   private hasNudgedCurrentSession = false
+  private permissionIssueKey: string | null = null
   private runId = 0
 
   constructor(private readonly options: FocusMonitorOptions) {}
@@ -101,6 +111,7 @@ export class FocusMonitorService {
   private resetState(): void {
     this.state = createInitialFocusState()
     this.hasNudgedCurrentSession = false
+    this.permissionIssueKey = null
   }
 
   private isActiveRun(runId: number): boolean {
@@ -138,6 +149,16 @@ export class FocusMonitorService {
       console.log('[FocusMonitor] Reading frontmost sample...')
       const sample = await this.readFrontmostSample()
       console.log('[FocusMonitor] ========== SAMPLE RECEIVED ==========', sample)
+
+      if (sample.permissionIssue) {
+        const issueKey = `${sample.permissionIssue}:${sample.permissionIssueAppName ?? ''}`
+        if (issueKey !== this.permissionIssueKey) {
+          this.permissionIssueKey = issueKey
+          this.options.onPermissionIssue?.(sample.permissionIssue, sample.permissionIssueAppName ?? null)
+        }
+      } else {
+        this.permissionIssueKey = null
+      }
       
       if (!this.isActiveRun(runId)) {
         console.log('[FocusMonitor] Run is no longer active, skipping')
@@ -215,6 +236,18 @@ const runAppleScript = async (script: string): Promise<string | null> => {
   return output || null
 }
 
+const isBrowserAutomationDeniedError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  return (
+    error.message.includes('Not authorized to send Apple events') ||
+    error.message.includes('not authorized to send Apple events') ||
+    error.message.includes('(-1743)')
+  )
+}
+
 const escapeAppleScriptString = (value: string): string => value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')
 
 const resolveBundleIdFromAppName = async (
@@ -260,17 +293,25 @@ const readFrontmostAppId = async (
 const readBrowserDomain = async (
   appId: string,
   runScript: (script: string) => Promise<string | null>
-): Promise<string | null> => {
+): Promise<BrowserDomainReadResult> => {
   const browser = BROWSER_BY_BUNDLE_ID.get(appId)
   if (!browser) {
-    return null
+    return { domain: null }
   }
 
   try {
     const url = await runScript(browser.urlScript)
-    return url ? normalizeDistractingDomain(url) : null
-  } catch {
-    return null
+    return { domain: url ? normalizeDistractingDomain(url) : null }
+  } catch (error) {
+    if (isBrowserAutomationDeniedError(error)) {
+      return {
+        domain: null,
+        permissionIssue: 'browser-automation-denied',
+        permissionIssueAppName: browser.appName
+      }
+    }
+
+    return { domain: null }
   }
 }
 
@@ -292,9 +333,10 @@ export const getFrontmostSample = async (
       return { appId: null, domain: null }
     }
 
+    const browserResult = await readBrowserDomain(appId, runScript)
     return {
       appId,
-      domain: await readBrowserDomain(appId, runScript)
+      ...browserResult
     }
   }
 
