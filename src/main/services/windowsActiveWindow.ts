@@ -13,20 +13,40 @@ let isInitialized = false
  * 初始化Windows活动窗口检测
  */
 export const initializeWindowsActiveWindow = (): boolean => {
+  console.log('[Windows] initializeWindowsActiveWindow called, platform:', process.platform)
+  
   if (isInitialized) {
     console.log('[Windows] Active window detection already initialized')
     return true
   }
 
   try {
+    console.log('[Windows] Attempting to load @paymoapp/active-window module...')
     // 动态导入native模块，避免在非Windows平台加载
     ActiveWindow = require('@paymoapp/active-window').default
+    console.log('[Windows] Module loaded:', typeof ActiveWindow)
+    
+    console.log('[Windows] Calling ActiveWindow.initialize()...')
     ActiveWindow.initialize()
+    
     isInitialized = true
     console.log('[Windows] Active window detection initialized successfully')
+    
+    // 测试一下是否能获取窗口信息
+    try {
+      const testWindow = ActiveWindow.getActiveWindow()
+      console.log('[Windows] Test getActiveWindow():', testWindow)
+    } catch (testError) {
+      console.error('[Windows] Test getActiveWindow() failed:', testError)
+    }
+    
     return true
   } catch (error) {
     console.error('[Windows] Failed to initialize active window detection:', error)
+    console.error('[Windows] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return false
   }
 }

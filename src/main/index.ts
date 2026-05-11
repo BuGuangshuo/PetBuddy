@@ -82,7 +82,9 @@ const main = async (): Promise<void> => {
   }
   
   // 初始化平台特定的焦点监控功能
+  console.log('[Main] Initializing focus monitor for platform:', process.platform);
   initializeFocusMonitor();
+  console.log('[Main] Focus monitor initialization completed');
   
   const deviceInfo = readDeviceInfo();
 
