@@ -93,26 +93,65 @@ const isBrowserApp = (appName: string, path: string): boolean => {
  * 支持常见浏览器的标题格式
  */
 const extractDomainFromBrowserTitle = (title: string): string | null => {
-  if (!title) return null
+  if (!title) {
+    console.log('[Windows] extractDomain: empty title')
+    return null
+  }
+
+  console.log('[Windows] extractDomain: trying to extract from title:', title)
 
   // 常见浏览器标题格式:
   // "页面标题 - Google Chrome"
   // "页面标题 - domain.com - Google Chrome"
   // "domain.com - 页面标题"
+  // "百度一下，你就知道 - Google Chrome"
   
-  // 尝试匹配URL模式
+  // 方法1: 尝试匹配完整URL模式
   const urlPattern = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])/g
   const matches = title.match(urlPattern)
   
   if (matches && matches.length > 0) {
-    // 使用第一个匹配的域名
+    console.log('[Windows] extractDomain: found URL pattern:', matches[0])
     try {
-      return normalizeDistractingDomain(matches[0])
-    } catch {
-      return null
+      const normalized = normalizeDistractingDomain(matches[0])
+      console.log('[Windows] extractDomain: normalized:', normalized)
+      return normalized
+    } catch (error) {
+      console.log('[Windows] extractDomain: normalization failed:', error)
     }
   }
 
+  // 方法2: 尝试从标题中提取域名关键词
+  // 例如 "百度一下" -> 检查是否包含 "baidu"
+  const titleLower = title.toLowerCase()
+  
+  // 常见中文网站的关键词映射
+  const keywordMap: Record<string, string> = {
+    '百度': 'baidu.com',
+    'baidu': 'baidu.com',
+    '淘宝': 'taobao.com',
+    'taobao': 'taobao.com',
+    '京东': 'jd.com',
+    '知乎': 'zhihu.com',
+    'zhihu': 'zhihu.com',
+    'bilibili': 'bilibili.com',
+    'b站': 'bilibili.com',
+    '微博': 'weibo.com',
+    'weibo': 'weibo.com',
+    'youtube': 'youtube.com',
+    'twitter': 'twitter.com',
+    'facebook': 'facebook.com',
+    'github': 'github.com'
+  }
+
+  for (const [keyword, domain] of Object.entries(keywordMap)) {
+    if (titleLower.includes(keyword)) {
+      console.log('[Windows] extractDomain: found keyword match:', keyword, '->', domain)
+      return domain
+    }
+  }
+
+  console.log('[Windows] extractDomain: no domain found')
   return null
 }
 
