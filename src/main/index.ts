@@ -402,15 +402,33 @@ const main = async (): Promise<void> => {
 
   const focusMonitor = new FocusMonitorService({
     getSettings: () => store.getSettings(),
-    shouldMonitor: () => readFocusSessionState().status === "active",
-    hasPermission: () => getAccessibilityStatus() === "granted",
+    shouldMonitor: () => {
+      const state = readFocusSessionState();
+      const isActive = state.status === "active";
+      console.log('[FocusMonitor] shouldMonitor check:', {
+        status: state.status,
+        isActive,
+        focusModeEnabled: store.getSettings().focusModeEnabled
+      });
+      return isActive;
+    },
+    hasPermission: () => {
+      const permission = getAccessibilityStatus();
+      console.log('[FocusMonitor] hasPermission check:', permission);
+      return permission === "granted";
+    },
     onDistractedDelta: (seconds) => {
+      console.log('[FocusMonitor] Distracted delta:', seconds);
       store.addDistractedSeconds(seconds);
     },
     onFocusStreak: (seconds) => {
+      console.log('[FocusMonitor] Focus streak:', seconds);
       store.setFocusStreak(seconds);
     },
-    onNudge: () => reminderService.enqueue("focusNudge"),
+    onNudge: () => {
+      console.log('[FocusMonitor] Nudge triggered!');
+      reminderService.enqueue("focusNudge");
+    },
   });
 
   windows.createTray(

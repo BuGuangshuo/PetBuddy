@@ -76,6 +76,7 @@ export class FocusMonitorService {
   start(): void {
     this.stop()
     const runId = ++this.runId
+    console.log('[FocusMonitor] Starting monitor, runId:', runId)
     this.timer = setInterval(() => {
       void this.poll(runId)
     }, 5000)
@@ -84,6 +85,7 @@ export class FocusMonitorService {
   stop(): void {
     this.runId += 1
     if (this.timer) {
+      console.log('[FocusMonitor] Stopping monitor')
       clearInterval(this.timer)
       this.timer = null
     }
