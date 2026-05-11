@@ -26,4 +26,8 @@
 
 !macro customUnInstall
   DetailPrint "Uninstalling PetBuddy from $INSTDIR"
+  ${ifNot} ${isUpdated}
+    DetailPrint "Removing PetBuddy user data from $APPDATA\\PetBuddy"
+    RMDir /r "$APPDATA\PetBuddy"
+  ${endIf}
 !macroend

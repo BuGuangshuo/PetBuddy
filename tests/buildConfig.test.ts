@@ -18,6 +18,9 @@ type PackageJson = {
       entitlementsInherit?: string
       notarize?: boolean
     }
+    nsis?: {
+      include?: string
+    }
   }
 }
 
@@ -32,7 +35,7 @@ describe('macOS packaging configuration', () => {
 
     expect(packageJson.scripts?.package).toContain('--mac')
     expect(packageJson.scripts?.package).toContain('--arm64')
-    expect(packageJson.build?.electronDist).toBe('node_modules/electron/dist')
+    expect(packageJson.build?.electronDist).toBeUndefined()
     expect(packageJson.build?.mac?.target).toEqual([
       {
         target: 'dmg',
@@ -53,6 +56,23 @@ describe('macOS packaging configuration', () => {
     expect(packageJson.build?.mac?.gatekeeperAssess).toBe(false)
     expect(packageJson.build?.mac?.entitlements).toBe('build/entitlements.mac.plist')
     expect(packageJson.build?.mac?.entitlementsInherit).toBe('build/entitlements.mac.inherit.plist')
-    expect(packageJson.build?.mac?.notarize).toBe(true)
+    expect(packageJson.build?.mac?.notarize).toBe(false)
+  })
+})
+
+describe('Windows packaging configuration', () => {
+  it('uses the shared NSIS include script for install and uninstall customization', () => {
+    const packageJson = loadPackageJson()
+
+    expect(packageJson.build?.nsis?.include).toBe('build/installer.nsh')
+  })
+
+  it('keeps user data during updates but removes it on manual uninstall', () => {
+    const installerScriptPath = resolve(process.cwd(), 'build', 'installer.nsh')
+    const installerScript = readFileSync(installerScriptPath, 'utf8')
+
+    expect(installerScript).toContain('!macro customUnInstall')
+    expect(installerScript).toContain('${ifNot} ${isUpdated}')
+    expect(installerScript).toContain('RMDir /r "$APPDATA\\PetBuddy"')
   })
 })
