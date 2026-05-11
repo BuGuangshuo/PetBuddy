@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { basename } from "node:path";
+import { basename, sep } from "node:path";
 import type { OpenDialogOptions, OpenDialogReturnValue } from "electron";
 
 export interface DistractingAppSelection {
@@ -7,12 +7,23 @@ export interface DistractingAppSelection {
   label: string;
 }
 
-const APP_PICKER_OPTIONS: OpenDialogOptions = {
+const MACOS_APP_PICKER_OPTIONS: OpenDialogOptions = {
   title: "选择要加入分心列表的应用",
   defaultPath: "/Applications",
   buttonLabel: "选择应用",
   properties: ["openFile"],
   filters: [{ name: "应用程序", extensions: ["app"] }],
+};
+
+const WINDOWS_APP_PICKER_OPTIONS: OpenDialogOptions = {
+  title: "选择要加入分心列表的应用",
+  defaultPath: "C:\\Program Files",
+  buttonLabel: "选择应用",
+  properties: ["openFile"],
+  filters: [
+    { name: "应用程序", extensions: ["exe"] },
+    { name: "所有文件", extensions: ["*"] }
+  ],
 };
 
 const readString = (value: string): string | null => {
@@ -73,6 +84,15 @@ const findAppPathByBundleIdentifier = (appId: string): string | null => {
 };
 
 export const resolveDistractingAppLabel = (appId: string): string => {
+  if (process.platform === "win32") {
+    // Windows: 从路径中提取文件名（不含扩展名）
+    // 处理反斜杠和正斜杠
+    const normalizedPath = appId.replace(/\\/g, '/');
+    const fileName = normalizedPath.split('/').pop() || appId;
+    const nameWithoutExt = fileName.replace(/\.exe$/i, '');
+    return nameWithoutExt || appId;
+  }
+
   if (process.platform !== "darwin") {
     return appId;
   }
@@ -91,22 +111,46 @@ export const pickDistractingApp = async (
     options: OpenDialogOptions,
   ) => Promise<OpenDialogReturnValue>,
 ): Promise<DistractingAppSelection | null> => {
-  if (process.platform !== "darwin") {
-    return null;
+  // Windows 平台支持
+  if (process.platform === "win32") {
+    const selection = await openDialog(WINDOWS_APP_PICKER_OPTIONS);
+    if (selection.canceled || selection.filePaths.length === 0) {
+      return null;
+    }
+
+    const appPath = selection.filePaths[0];
+    // 使用完整路径作为 ID（Windows 应用没有 bundle identifier）
+    const id = appPath;
+    // 从路径中提取应用名称
+    const normalizedPath = appPath.replace(/\\/g, '/');
+    const fileName = normalizedPath.split('/').pop() || '';
+    const label = fileName.replace(/\.exe$/i, '');
+    
+    if (!label) {
+      return null;
+    }
+
+    return { id, label };
   }
 
-  const selection = await openDialog(APP_PICKER_OPTIONS);
-  if (selection.canceled || selection.filePaths.length === 0) {
-    return null;
+  // macOS 平台支持
+  if (process.platform === "darwin") {
+    const selection = await openDialog(MACOS_APP_PICKER_OPTIONS);
+    if (selection.canceled || selection.filePaths.length === 0) {
+      return null;
+    }
+
+    const appPath = selection.filePaths[0];
+    const id = readBundleIdentifier(appPath);
+    const label = readAppDisplayName(appPath);
+    const resolvedId = id ?? label;
+    if (!resolvedId || !label) {
+      return null;
+    }
+
+    return { id: resolvedId, label };
   }
 
-  const appPath = selection.filePaths[0];
-  const id = readBundleIdentifier(appPath);
-  const label = readAppDisplayName(appPath);
-  const resolvedId = id ?? label;
-  if (!resolvedId || !label) {
-    return null;
-  }
-
-  return { id: resolvedId, label };
+  // 其他平台不支持
+  return null;
 };

@@ -128,7 +128,7 @@ describe("pickDistractingApp", () => {
     expect(execFileSyncMock).not.toHaveBeenCalled();
   });
 
-  it("returns null outside macOS", async () => {
+  it("returns null outside macOS and Windows", async () => {
     setPlatform("linux");
     const openDialog = vi.fn();
 
@@ -138,6 +138,61 @@ describe("pickDistractingApp", () => {
 
     expect(await pickDistractingApp(openDialog)).toBeNull();
     expect(openDialog).not.toHaveBeenCalled();
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the selected app path from the system open panel on Windows", async () => {
+    setPlatform("win32");
+    const openDialog = vi.fn<
+      (options: OpenDialogOptions) => Promise<{ canceled: boolean; filePaths: string[] }>
+    >().mockResolvedValue({
+      canceled: false,
+      filePaths: ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"],
+    });
+
+    const { pickDistractingApp } = await import(
+      "../src/main/services/distractingAppPicker"
+    );
+
+    expect(await pickDistractingApp(openDialog)).toEqual({
+      id: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      label: "chrome",
+    });
+    expect(openDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "选择要加入分心列表的应用",
+        defaultPath: "C:\\Program Files",
+        buttonLabel: "选择应用",
+        properties: ["openFile"],
+      }),
+    );
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves display labels from exe paths on Windows", async () => {
+    setPlatform("win32");
+
+    const { resolveDistractingAppLabel } = await import(
+      "../src/main/services/distractingAppPicker"
+    );
+
+    expect(resolveDistractingAppLabel("C:\\Program Files\\Spotify\\Spotify.exe")).toBe("Spotify");
+    expect(resolveDistractingAppLabel("C:\\Users\\Test\\AppData\\Local\\Discord\\app-1.0.9015\\Discord.exe")).toBe("Discord");
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the picker is cancelled on Windows", async () => {
+    setPlatform("win32");
+    const openDialog = vi.fn().mockResolvedValue({
+      canceled: true,
+      filePaths: [],
+    });
+
+    const { pickDistractingApp } = await import(
+      "../src/main/services/distractingAppPicker"
+    );
+
+    expect(await pickDistractingApp(openDialog)).toBeNull();
     expect(execFileSyncMock).not.toHaveBeenCalled();
   });
 });

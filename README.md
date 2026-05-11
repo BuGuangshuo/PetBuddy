@@ -205,6 +205,12 @@ pnpm run package:release # 签名和公证发布包
 #### Windows 发布流程
 详见：[docs/windows-support.md](docs/windows-support.md)
 
+**环境要求**：
+- Python 3.x（用于编译原生模块）
+- Visual Studio Build Tools（用于 C++ 编译）
+
+详细的环境配置请查看：[docs/windows-build-requirements.md](docs/windows-build-requirements.md)
+
 ```bash
 pnpm run package:win:x64     # 仅打包 64 位版本
 pnpm run package:win         # 打包 32 位和 64 位版本
@@ -215,6 +221,9 @@ pnpm run package:win:release # 打包发布版本
 - `package.json` 版本号与 Git tag 一致
 - 准备好 `build/icon.ico` 文件
 - 生成并上传 `.exe`（两个架构）、`.zip`（两个架构）、`latest.yml`
+
+**常见问题**：
+- 如果遇到 "Could not find any Python installation" 错误，请参考 [Windows 打包环境要求](docs/windows-build-requirements.md)
 
 ### 跨平台打包说明
 

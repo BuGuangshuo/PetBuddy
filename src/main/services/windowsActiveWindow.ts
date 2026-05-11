@@ -110,8 +110,9 @@ export const getWindowsFrontmostSample = async (): Promise<FrontmostSample> => {
       return { appId: null, domain: null }
     }
 
-    // 使用应用程序名称作为appId
-    const appId = windowInfo.application || extractAppIdFromPath(windowInfo.path)
+    // Windows 使用完整路径作为 appId，这样可以与用户选择的应用路径匹配
+    // 如果路径不可用，则使用应用程序名称
+    const appId = windowInfo.path || windowInfo.application || extractAppIdFromPath(windowInfo.path)
     
     // 如果是浏览器，尝试从标题中提取域名
     let domain: string | null = null

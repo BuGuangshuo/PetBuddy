@@ -653,8 +653,10 @@ const SettingsApp = () => {
     payload.settings.waterIntervalMinutes,
   );
   const isFocusModeEnabled = payload.settings.focusModeEnabled;
-  const canConfigureFocusDetection =
-    !payload.isWindows && isFocusModeEnabled && payload.permissionState === "granted";
+  // Windows 平台现在也支持分心检测，但不需要权限
+  const canConfigureFocusDetection = payload.isWindows 
+    ? isFocusModeEnabled 
+    : isFocusModeEnabled && payload.permissionState === "granted";
   const activeFocusSeconds =
     payload.focusSession.status === "active"
       ? getElapsedFocusSessionSeconds(payload.focusSession.session, now)
@@ -697,7 +699,7 @@ const SettingsApp = () => {
             </div>
           </div>
 
-          <div className={`stats-grid ${payload.isWindows ? 'stats-grid-3' : ''}`}>
+          <div className="stats-grid">
             <StatCard
               label="休息"
               value={stats.acknowledged.break}
@@ -716,14 +718,12 @@ const SettingsApp = () => {
               unit="分钟"
               icon={<FieldTimeOutlined />}
             />
-            {!payload.isWindows && (
-              <StatCard
-                label="分心"
-                value={stats.shown.focusNudge}
-                unit="次"
-                icon={<BellOutlined />}
-              />
-            )}
+            <StatCard
+              label="分心"
+              value={stats.shown.focusNudge}
+              unit="次"
+              icon={<BellOutlined />}
+            />
           </div>
 
           {showOnboarding ? (
@@ -1008,29 +1008,27 @@ const SettingsApp = () => {
                   />
                 </div>
               </div>
-              {!payload.isWindows && (
-                <div className="field-row horizontal">
-                  <div>
-                    <div className="field-label">开启分心检测</div>
-                    <div className="field-hint">
-                      在专注模式下浏览特定应用或网址的时候，宠物会出现分心提醒。
-                    </div>
-                  </div>
-                  <div className="field-control">
-                    <Toggle
-                      checked={isFocusModeEnabled}
-                      onChange={(checked) =>
-                        void runPayloadAction(
-                          window.petBuddy.app.toggleFocusMode(
-                            checked,
-                            payload.permissionState !== "granted",
-                          ),
-                        )
-                      }
-                    />
+              <div className="field-row horizontal">
+                <div>
+                  <div className="field-label">开启分心检测</div>
+                  <div className="field-hint">
+                    在专注模式下浏览特定应用或网址的时候，宠物会出现分心提醒。
                   </div>
                 </div>
-              )}
+                <div className="field-control">
+                  <Toggle
+                    checked={isFocusModeEnabled}
+                    onChange={(checked) =>
+                      void runPayloadAction(
+                        window.petBuddy.app.toggleFocusMode(
+                          checked,
+                          payload.permissionState !== "granted",
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              </div>
               {canConfigureFocusDetection ? (
                 <>
                   <div className="field-row">

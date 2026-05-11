@@ -61,7 +61,9 @@
     "productName": "PetBuddy",
     "afterPack": "./scripts/after-pack.mjs",
     "asar": true,
-    "asarUnpack": [],
+    "asarUnpack": [
+      "node_modules/@paymoapp/active-window/**/*"
+    ],
     "files": [
       "out/**/*",
       "package.json",
@@ -72,6 +74,9 @@
       "build/tray-icon-32.png",
       "USER_CHANGELOG.md"
     ],
+    "electronRebuild": {
+      "force": true
+    },
     "directories": {
       "buildResources": "build",
       "output": "release"

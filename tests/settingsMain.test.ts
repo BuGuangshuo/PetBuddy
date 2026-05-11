@@ -144,14 +144,21 @@ describe("settings-main actions", () => {
     expect(source).toContain("<div className='field-label'>休息间隔</div>");
   });
 
-  it("shows focus detection settings only when focus mode is enabled and accessibility access is granted", () => {
+  it("shows focus detection settings when focus mode is enabled (Windows: no permission needed, macOS: needs permission)", () => {
     const source = readNormalizedSource("src/renderer/src/settings-main.tsx");
 
     expect(source).toContain(
       "const isFocusModeEnabled = payload.settings.focusModeEnabled",
     );
+    // Windows 平台不需要权限，macOS 需要权限
     expect(source).toContain(
-      "const canConfigureFocusDetection = !payload.isWindows && isFocusModeEnabled && payload.permissionState === 'granted'",
+      "const canConfigureFocusDetection = payload.isWindows",
+    );
+    expect(source).toContain(
+      "? isFocusModeEnabled",
+    );
+    expect(source).toContain(
+      "isFocusModeEnabled && payload.permissionState === 'granted'",
     );
     expect(source).toContain("{canConfigureFocusDetection ? (");
     expect(source).toContain("<div className='field-label'>检测宽限时间</div>");
@@ -445,15 +452,11 @@ describe("settings-main actions", () => {
     expect(styles).toContain("white-space: nowrap;");
   });
 
-  it("hides the distraction stat card on Windows platform", () => {
+  it("shows the distraction stat card on all platforms including Windows", () => {
     const source = readNormalizedSource("src/renderer/src/settings-main.tsx");
-    const styles = readSource("src/renderer/src/styles.css");
 
-    expect(source).toContain("{!payload.isWindows && (");
     expect(source).toContain("<StatCard label='分心'");
     expect(source).toContain("value={stats.shown.focusNudge}");
-    expect(source).toContain("className={`stats-grid ${payload.isWindows ? 'stats-grid-3' : ''}`}");
-    expect(styles).toContain(".stats-grid-3 {");
-    expect(styles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr));");
+    expect(source).toContain("icon={<BellOutlined />}");
   });
 });
